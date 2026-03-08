@@ -26,9 +26,7 @@ If the command is not found, build it from source. Requires
 [git](https://git-scm.com/) and [Go](https://go.dev/) v1.24+:
 
 ```bash
-git clone https://github.com/grafana/grafanactl-experiments.git
-cd grafanactl-experiments
-go install ./cmd/grafanactl
+tmp=$(mktemp -d) && git clone --depth 1 https://github.com/grafana/grafanactl-experiments.git "$tmp" && (cd "$tmp" && go install ./cmd/grafanactl) && rm -rf "$tmp"
 ```
 
 After installing, verify the binary is on PATH:
