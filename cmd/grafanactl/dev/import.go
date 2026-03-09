@@ -42,10 +42,20 @@ func importCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "import [RESOURCE_SELECTOR]...",
 		Args:  cobra.ArbitraryArgs,
-		Short: "Import resources from Grafana and converts them to code",
-		Long:  "TODO.",
+		Short: "Import resources from Grafana and convert them to Go builder code",
+		Long:  "Import resources from a Grafana instance and convert them into Go files using the grafana-foundation-sdk builder pattern. Each imported resource is written as a function returning *resource.ManifestBuilder.",
 		Example: `
-	# TODO
+	# Import all dashboards into the default path (imported/):
+	grafanactl dev import dashboards
+
+	# Import a specific dashboard by name:
+	grafanactl dev import dashboards/my-dashboard
+
+	# Import multiple resource types:
+	grafanactl dev import dashboards folders
+
+	# Import into a custom directory:
+	grafanactl dev import dashboards --path src/grafana
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()

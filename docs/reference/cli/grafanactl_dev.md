@@ -4,7 +4,7 @@ Manage Grafana resources as code
 
 ### Synopsis
 
-TODO.
+Tools for managing Grafana resources as code: scaffold new projects, import existing resources from Grafana, and generate typed Go stubs for new resources.
 
 ### Options
 
@@ -23,6 +23,7 @@ TODO.
 ### SEE ALSO
 
 * [grafanactl](grafanactl.md)	 - 
-* [grafanactl dev import](grafanactl_dev_import.md)	 - Import resources from Grafana and converts them to code
-* [grafanactl dev scaffold](grafanactl_dev_scaffold.md)	 - TODO
+* [grafanactl dev generate](grafanactl_dev_generate.md)	 - Generate typed Go stubs for Grafana resources
+* [grafanactl dev import](grafanactl_dev_import.md)	 - Import resources from Grafana and convert them to Go builder code
+* [grafanactl dev scaffold](grafanactl_dev_scaffold.md)	 - Scaffold a new Grafana resources-as-code project
 

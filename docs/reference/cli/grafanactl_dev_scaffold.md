@@ -1,10 +1,10 @@
 ## grafanactl dev scaffold
 
-TODO
+Scaffold a new Grafana resources-as-code project
 
 ### Synopsis
 
-TODO.
+Scaffold a new Go project pre-configured for managing Grafana resources as code. Generates a module with example dashboards, a deploy workflow, and grafanactl configuration.
 
 ```
 grafanactl dev scaffold [flags]
@@ -14,7 +14,11 @@ grafanactl dev scaffold [flags]
 
 ```
 
-	# TODO
+	# Interactive scaffolding (prompts for project name and Go module path):
+	grafanactl dev scaffold
+
+	# Non-interactive with flags:
+	grafanactl dev scaffold --project my-dashboards --go-module-path github.com/example/my-dashboards
 
 ```
 

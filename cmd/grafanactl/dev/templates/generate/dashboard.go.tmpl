@@ -1,0 +1,33 @@
+package {{ .Package }}
+
+import (
+	dashboard "github.com/grafana/grafana-foundation-sdk/go/dashboardv2beta1"
+	"github.com/grafana/grafana-foundation-sdk/go/resource"
+	"github.com/grafana/grafana-foundation-sdk/go/testdata"
+	"github.com/grafana/grafana-foundation-sdk/go/timeseries"
+)
+
+func {{ .FuncName }}() *resource.ManifestBuilder {
+	builder := dashboard.NewDashboardBuilder("{{ .Name }}").
+		Panel("panel-1",
+			dashboard.NewPanelBuilder().
+				Title("New panel").
+				Visualization(timeseries.NewVisualizationBuilder()).
+				Data(
+					dashboard.NewQueryGroupBuilder().
+						Target(
+							dashboard.NewTargetBuilder().Query(
+								testdata.NewQueryBuilder().
+									ScenarioId("random_walk").
+									SeriesCount(1),
+							),
+						),
+				),
+		).
+		AutoGridLayout(
+			dashboard.AutoGrid().
+				WithItem("panel-1"),
+		)
+
+	return dashboard.Manifest("{{ .Name }}", builder)
+}

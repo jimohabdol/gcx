@@ -1,10 +1,10 @@
 ## grafanactl dev import
 
-Import resources from Grafana and converts them to code
+Import resources from Grafana and convert them to Go builder code
 
 ### Synopsis
 
-TODO.
+Import resources from a Grafana instance and convert them into Go files using the grafana-foundation-sdk builder pattern. Each imported resource is written as a function returning *resource.ManifestBuilder.
 
 ```
 grafanactl dev import [RESOURCE_SELECTOR]... [flags]
@@ -14,7 +14,17 @@ grafanactl dev import [RESOURCE_SELECTOR]... [flags]
 
 ```
 
-	# TODO
+	# Import all dashboards into the default path (imported/):
+	grafanactl dev import dashboards
+
+	# Import a specific dashboard by name:
+	grafanactl dev import dashboards/my-dashboard
+
+	# Import multiple resource types:
+	grafanactl dev import dashboards folders
+
+	# Import into a custom directory:
+	grafanactl dev import dashboards --path src/grafana
 
 ```
 

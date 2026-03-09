@@ -1,0 +1,31 @@
+package {{ .Package }}
+
+import (
+	"github.com/grafana/grafana-foundation-sdk/go/alerting"
+	"github.com/grafana/grafana-foundation-sdk/go/resource"
+)
+
+func {{ .FuncName }}() *resource.ManifestBuilder {
+	rule := alerting.NewRuleBuilder("{{ .Name }}").
+		Condition("A").
+		For("5m").
+		Labels(map[string]string{}).
+		Annotations(map[string]string{
+			"summary": "",
+		})
+
+	ruleObj, err := rule.Build()
+	if err != nil {
+		manifestBuilder := resource.NewManifestBuilder()
+		manifestBuilder.RecordError("Rule({{ .Name }})", err)
+		return manifestBuilder
+	}
+
+	return resource.NewManifestBuilder().
+		ApiVersion("notifications.alerting.grafana.app/v0alpha1").
+		Kind("AlertRule").
+		Metadata(
+			resource.NewMetadataBuilder().Name("{{ .Name }}"),
+		).
+		Spec(ruleObj)
+}

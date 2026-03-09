@@ -73,6 +73,7 @@ grafanactl (root)
 │   └── test                 Run rule test suite
 │
 └── dev                      [cmd/grafanactl/dev/command.go]
+    ├── generate [FILE_PATH]... Generate typed Go stubs for new resources
     ├── import               Import existing Grafana resources as code
     └── scaffold             Scaffold a new grafanactl-based project
 ```
@@ -217,10 +218,11 @@ cmd/grafanactl/
 │   ├── rules.go             linter rules — list available linter rules
 │   └── test.go              linter test — run rule test suite
 ├── dev/
-│   ├── command.go           dev group (import, scaffold subcommands)
+│   ├── command.go           dev group (generate, import, scaffold subcommands)
+│   ├── generate.go          dev generate — generate typed Go stubs for new resources
 │   ├── import.go            dev import — import Grafana resources as code
 │   ├── scaffold.go          dev scaffold — scaffold a new project
-│   └── templates/           Embedded Go templates for import/scaffold
+│   └── templates/           Embedded Go templates for generate/import/scaffold
 ├── fail/
 │   ├── detailed.go          DetailedError type — rich error formatting
 │   └── convert.go           ErrorToDetailedError — error-type dispatch table

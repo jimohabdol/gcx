@@ -78,7 +78,7 @@ cmd/grafanactl/
 ├── providers/   Provider list command
 ├── api/         Raw API passthrough command (direct Grafana API calls)
 ├── linter/      Linting commands (lint, new, rules, test subcommands)
-├── dev/         Developer commands (import, scaffold subcommands)
+├── dev/         Developer commands (import, scaffold, generate subcommands)
 ├── fail/        Structured error → user-friendly message conversion
 └── io/          Output codec registry (json, yaml, text, wide)
 

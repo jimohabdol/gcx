@@ -33,10 +33,14 @@ func scaffoldCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "scaffold",
 		Args:  cobra.NoArgs,
-		Short: "TODO",
-		Long:  "TODO.",
+		Short: "Scaffold a new Grafana resources-as-code project",
+		Long:  "Scaffold a new Go project pre-configured for managing Grafana resources as code. Generates a module with example dashboards, a deploy workflow, and grafanactl configuration.",
 		Example: `
-	# TODO
+	# Interactive scaffolding (prompts for project name and Go module path):
+	grafanactl dev scaffold
+
+	# Non-interactive with flags:
+	grafanactl dev scaffold --project my-dashboards --go-module-path github.com/example/my-dashboards
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := askMissingOpts(opts); err != nil {
