@@ -64,6 +64,9 @@ ifndef GOPATH
 	exit 1
 endif
 	@cp "bin/grafanactl" "${GOPATH}/bin/grafanactl"
+ifeq ($(shell uname),Darwin)
+	@codesign -s - "${GOPATH}/bin/grafanactl"
+endif
 
 .PHONY: deps
 deps: check-binaries ## Installs the dependencies.
