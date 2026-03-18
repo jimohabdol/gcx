@@ -211,7 +211,8 @@ Pipeline stages:
 1. Parse CLI selectors; if none, expand to ALL preferred resource types
 2. Concurrent fetch via `VersionedClient` (handles API version re-fetch when stored version differs)
 3. Process: `ServerFieldsStripper` removes server-generated annotations and rebuilds clean objects
-4. FSWriter writes files organized as `{Kind}/{Name}.{ext}`
+4. FSWriter writes files organized as `{Kind}.{Version}.{Group}/{Name}.{ext}`
+5. 404/405 responses during fetch are silently skipped (not counted as errors)
 
 ### Delete
 
@@ -232,7 +233,7 @@ Browser  <--(Chi router + reverse proxy)----------+
    +-------(WebSocket live reload)----------------+
 ```
 
-The serve command starts a local HTTP server that:
+The `dev serve` command (formerly `resources serve`) starts a local HTTP server that:
 - Reverse-proxies most requests to the real Grafana instance
 - Intercepts dashboard/folder API calls and serves from in-memory resources
 - Watches local files for changes via fsnotify
@@ -360,7 +361,7 @@ grafanactl
   +-- config             (--config, --context as persistent flags)
   |     +-- check, current-context, list-contexts, set, unset, use-context, view
   +-- resources          (--config, --context as persistent flags)
-  |     +-- get, list, pull, push, delete, edit, validate, serve
+  |     +-- get, schemas, pull, push, delete, edit, validate
   +-- datasources        (--config, --context as persistent flags)
   |     +-- get, list, prometheus, loki
   +-- query              (--config, --context as persistent flags)
@@ -368,7 +369,7 @@ grafanactl
   +-- providers
   |     (single command: list registered providers)
   +-- dev
-        (import, scaffold subcommands for code scaffolding workflows)
+        (import, scaffold, generate, lint, serve subcommands for code scaffolding/dev workflows)
 ```
 
 ### The Options Pattern
@@ -688,14 +689,14 @@ Files most important for understanding the codebase. Organized by architectural 
 | `internal/linter/tests.go` | Test runner for `.rego` test files |
 | `internal/linter/bundle/` | Embedded Rego bundle with built-in linting rules |
 | `internal/linter/builtins/` | Built-in rule validators (PromQL, LogQL) |
-| `cmd/grafanactl/linter/command.go` | `linter` command group (lint, new, rules, test subcommands) |
+| `cmd/grafanactl/linter/command.go` | `dev lint` subgroup (run, new, rules, test subcommands; formerly top-level `linter`) |
 | `scripts/linter-rules-reference/` | Code generator for linter rule reference documentation |
 
 ### Dev Command
 
 | File | Purpose |
 |------|---------|
-| `cmd/grafanactl/dev/command.go` | `dev` command group (import, scaffold subcommands) |
+| `cmd/grafanactl/dev/command.go` | `dev` command group (import, scaffold, generate, lint, serve subcommands) |
 
 ### Datasource Query Clients
 

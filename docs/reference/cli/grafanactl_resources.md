@@ -29,9 +29,8 @@ Manipulate Grafana resources.
 * [grafanactl resources delete](grafanactl_resources_delete.md)	 - Delete resources from Grafana
 * [grafanactl resources edit](grafanactl_resources_edit.md)	 - Edit resources from Grafana
 * [grafanactl resources get](grafanactl_resources_get.md)	 - Get resources from Grafana
-* [grafanactl resources list](grafanactl_resources_list.md)	 - List available Grafana API resources
 * [grafanactl resources pull](grafanactl_resources_pull.md)	 - Pull resources from Grafana
 * [grafanactl resources push](grafanactl_resources_push.md)	 - Push resources to Grafana
-* [grafanactl resources serve](grafanactl_resources_serve.md)	 - Serve Grafana resources locally
+* [grafanactl resources schemas](grafanactl_resources_schemas.md)	 - List available Grafana API resource types
 * [grafanactl resources validate](grafanactl_resources_validate.md)	 - Validate resources
 

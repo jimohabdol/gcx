@@ -582,8 +582,13 @@ Plural form is used in selectors: `dashboards/my-dash`, `folders/`.
 
 ### 9.2 File Naming `[CURRENT]`
 
-Pull operations write files as `{Kind}/{Name}.{ext}`, grouped by
+Pull operations write files as `{Kind}.{Version}.{Group}/{Name}.{ext}`, grouped by
 `GroupResourcesByKind`. Extension matches the source format (`.yaml`, `.json`).
+
+Example: `Dashboard.v1alpha1.dashboard.grafana.app/my-dash.yaml`
+
+The versioned directory name makes the API group and version unambiguous, which
+is important when pulling multiple versions of the same resource type.
 
 ### 9.3 Config Key Naming `[CURRENT]`
 

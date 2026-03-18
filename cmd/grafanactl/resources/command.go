@@ -22,7 +22,6 @@ func Command() *cobra.Command {
 	cmd.AddCommand(listCmd(configOpts))
 	cmd.AddCommand(pullCmd(configOpts))
 	cmd.AddCommand(pushCmd(configOpts))
-	cmd.AddCommand(serveCmd(configOpts))
 	cmd.AddCommand(validateCmd(configOpts))
 
 	return cmd

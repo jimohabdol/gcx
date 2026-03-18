@@ -72,50 +72,50 @@ func lintCmd() *cobra.Command {
 	opts := lintOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "lint PATH...",
+		Use:   "run PATH...",
 		Short: "Lint Grafana resources",
 		Long:  "Lint Grafana resources.",
 		Args:  cobra.MinimumNArgs(1),
 		Example: `
 	# Lint Grafana resources using builtin rules:
 
-	grafanactl linter lint ./resources
+	grafanactl dev lint run ./resources
 
 	# Lint specific files:
 
-	grafanactl linter lint ./resources/file.json ./resources/other.yaml
+	grafanactl dev lint run ./resources/file.json ./resources/other.yaml
 
 	# Display compact results:
 
-	grafanactl linter lint ./resources -o compact
+	grafanactl dev lint run ./resources -o compact
 
 	# Use custom rules:
 
-	grafanactl linter lint --rules ./custom-rules ./resources
+	grafanactl dev lint run --rules ./custom-rules ./resources
 
 	# Disable all rules for a resource type:
 
-	grafanactl linter lint --disable-resource dashboard ./resources
+	grafanactl dev lint run --disable-resource dashboard ./resources
 
 	# Disable all rules in a category:
 
-	grafanactl linter lint --disable-category idiomatic ./resources
+	grafanactl dev lint run --disable-category idiomatic ./resources
 
 	# Disable specific rules:
 
-	grafanactl linter lint --disable uneditable-dashboard --disable panel-title-description ./resources
+	grafanactl dev lint run --disable uneditable-dashboard --disable panel-title-description ./resources
 
 	# Enable rules for specific resource types:
 
-	grafanactl linter lint --disable-all --enable-resource dashboard ./resources
+	grafanactl dev lint run --disable-all --enable-resource dashboard ./resources
 
 	# Enable only some categories:
 
-	grafanactl linter lint --disable-all --enable-category idiomatic ./resources
+	grafanactl dev lint run --disable-all --enable-category idiomatic ./resources
 
 	# Enable only specific rules:
 
-	grafanactl linter lint --disable-all --enable uneditable-dashboard ./resources
+	grafanactl dev lint run --disable-all --enable uneditable-dashboard ./resources
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.validate(args); err != nil {

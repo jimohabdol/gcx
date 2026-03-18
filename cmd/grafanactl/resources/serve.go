@@ -61,7 +61,7 @@ func (opts *serveOpts) Validate() error {
 	return nil
 }
 
-func serveCmd(configOpts *cmdconfig.Options) *cobra.Command {
+func ServeCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &serveOpts{}
 
 	cmd := &cobra.Command{
@@ -83,14 +83,14 @@ support for file notifications.
 `,
 		Example: `
 	# Serve resources from a directory:
-	grafanactl resources serve ./resources
+	grafanactl dev serve ./resources
 
 	# Serve resources from a directory but don't watch for changes:
-	grafanactl resources serve ./resources --no-watch
+	grafanactl dev serve ./resources --no-watch
 
 	# Serve resources from a script that outputs a YAML resource and watch for changes:
 	# Note: the Grafana Foundation SDK can be used to generate dashboards (https://grafana.github.io/grafana-foundation-sdk/)
-	grafanactl resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format yaml
+	grafanactl dev serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format yaml
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.Validate(); err != nil {

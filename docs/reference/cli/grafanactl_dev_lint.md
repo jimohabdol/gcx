@@ -1,17 +1,15 @@
-## grafanactl slo reports list
+## grafanactl dev lint
 
-List SLO reports.
+Lint Grafana resources
 
-```
-grafanactl slo reports list [flags]
-```
+### Synopsis
+
+Lint Grafana resources.
 
 ### Options
 
 ```
-  -h, --help            help for list
-      --json string     Comma-separated list of fields to include in JSON output, or '?' to discover available fields
-  -o, --output string   Output format. One of: json, table, wide, yaml (default "table")
+  -h, --help   help for lint
 ```
 
 ### Options inherited from parent commands
@@ -27,5 +25,9 @@ grafanactl slo reports list [flags]
 
 ### SEE ALSO
 
-* [grafanactl slo reports](grafanactl_slo_reports.md)	 - Manage SLO reports.
+* [grafanactl dev](grafanactl_dev.md)	 - Manage Grafana resources as code
+* [grafanactl dev lint new](grafanactl_dev_lint_new.md)	 - Creates a new linter rule
+* [grafanactl dev lint rules](grafanactl_dev_lint_rules.md)	 - List available linter rules
+* [grafanactl dev lint run](grafanactl_dev_lint_run.md)	 - Lint Grafana resources
+* [grafanactl dev lint test](grafanactl_dev_lint_test.md)	 - Run linter rules tests
 

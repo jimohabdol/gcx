@@ -39,11 +39,11 @@ func rulesCmd() *cobra.Command {
 		Example: `
 	# List built-in rules:
 
-	grafanactl linter rules
+	grafanactl dev lint rules
 
 	# List built-in and custom rules:
 
-	grafanactl linter rules -r ./custom-rules
+	grafanactl dev lint rules -r ./custom-rules
 `,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.validate(); err != nil {

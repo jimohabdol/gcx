@@ -6,6 +6,7 @@ import (
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
 	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
+	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/resources/local"
 	"github.com/grafana/grafanactl/internal/resources/process"
 	"github.com/grafana/grafanactl/internal/resources/remote"
@@ -103,7 +104,10 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	grafanactl resources pull checks -p ./checks/
 	grafanactl resources pull rules -p ./rules/`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
+			// Inject the --context flag value into the Go context so that provider
+			// adapter factories (SLO, Synth, etc.) can honour it when loading their
+			// own credentials, even though they don't share configOpts directly.
+			ctx := config.ContextWithName(cmd.Context(), configOpts.Context)
 
 			if err := opts.Validate(); err != nil {
 				return err
@@ -119,7 +123,7 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			res, err := FetchResources(cmd.Context(), FetchRequest{
+			res, err := FetchResources(ctx, FetchRequest{
 				Config: cfg,
 				// Strip server fields from the resources.
 				// This includes fields like `resourceVersion`, `uid`, etc.
@@ -154,7 +158,11 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				}
 			}
 
-			printer(cmd.OutOrStdout(), "%d resources pulled, %d errors", pullSummary.SuccessCount(), pullSummary.FailedCount())
+			if skipped := pullSummary.SkippedCount(); skipped > 0 {
+				printer(cmd.OutOrStdout(), "%d resources pulled, %d errors (%d resource types skipped — not listable)", pullSummary.SuccessCount(), pullSummary.FailedCount(), skipped)
+			} else {
+				printer(cmd.OutOrStdout(), "%d resources pulled, %d errors", pullSummary.SuccessCount(), pullSummary.FailedCount())
+			}
 
 			if opts.OnError.FailOnErrors() && pullSummary.FailedCount() > 0 {
 				return fmt.Errorf("%d resource(s) failed to pull", pullSummary.FailedCount())

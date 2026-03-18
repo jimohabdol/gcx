@@ -16,7 +16,7 @@ import (
 //   - The --json flag has been set (risk mitigation for scripts parsing stdout).
 //
 // newCmd is the equivalent unified command the user should migrate to,
-// e.g. "grafanactl resources list slo".
+// e.g. "grafanactl resources schemas slo".
 func WarnDeprecated(cmd *cobra.Command, newCmd string) {
 	if agent.IsAgentMode() || jsonFlagActive(cmd) {
 		return
@@ -24,6 +24,16 @@ func WarnDeprecated(cmd *cobra.Command, newCmd string) {
 
 	fmt.Fprintf(os.Stderr, "Warning: '%s' is deprecated, use '%s' instead\n",
 		cmd.CommandPath(), newCmd)
+}
+
+// IsCRUDCommand reports whether the given command is one of the CRUD verbs
+// that are being replaced by the unified resource model. Non-CRUD subcommands
+// (like status, timeline) are not deprecated and should not produce warnings.
+func IsCRUDCommand(cmd *cobra.Command) bool {
+	crudVerbs := map[string]bool{
+		"list": true, "get": true, "push": true, "pull": true, "delete": true,
+	}
+	return crudVerbs[cmd.Name()]
 }
 
 // jsonFlagActive returns true when any command in the ancestry chain has the

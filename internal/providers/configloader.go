@@ -25,6 +25,13 @@ func (l *ConfigLoader) BindFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&l.ctxName, "context", "", "Name of the context to use")
 }
 
+// SetContextName sets the config context name to use when loading config.
+// This is used by provider adapter factories to honour the --context flag
+// threaded via context.Context.
+func (l *ConfigLoader) SetContextName(name string) {
+	l.ctxName = name
+}
+
 // LoadRESTConfig loads the REST config from the config file, applying
 // env var overrides and context flags. It mirrors the logic in
 // cmd/grafanactl/config.Options.LoadRESTConfig.
@@ -86,13 +93,18 @@ func (l *ConfigLoader) LoadRESTConfig(ctx context.Context) (config.NamespacedRES
 		},
 	}
 
-	// Apply context flag override.
-	if l.ctxName != "" {
+	// Resolve context name: explicit flag takes priority, then context.Context carrier
+	// (set by resource commands to honour the --context flag for provider adapters).
+	ctxName := l.ctxName
+	if ctxName == "" {
+		ctxName = config.ContextNameFromCtx(ctx)
+	}
+	if ctxName != "" {
 		overrides = append(overrides, func(cfg *config.Config) error {
-			if !cfg.HasContext(l.ctxName) {
-				return config.ContextNotFound(l.ctxName)
+			if !cfg.HasContext(ctxName) {
+				return config.ContextNotFound(ctxName)
 			}
-			cfg.CurrentContext = l.ctxName
+			cfg.CurrentContext = ctxName
 			return nil
 		})
 	}

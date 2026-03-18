@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/grafana/grafanactl/internal/config"
+	internalconfig "github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/providers"
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/resources/adapter"
@@ -47,6 +47,7 @@ func init() { //nolint:gochecknoinits // Self-registration pattern (like databas
 func NewLazyFactory() adapter.Factory {
 	return func(ctx context.Context) (adapter.ResourceAdapter, error) {
 		var loader providers.ConfigLoader
+		loader.SetContextName(internalconfig.ContextNameFromCtx(ctx))
 
 		cfg, err := loader.LoadRESTConfig(ctx)
 		if err != nil {
@@ -68,7 +69,7 @@ var _ adapter.ResourceAdapter = &ResourceAdapter{}
 // NewFactoryFromConfig returns an adapter.Factory for SLO definitions that
 // creates a definitions.Client using the provided NamespacedRESTConfig.
 // The factory is lazy — the client is only created when the factory is invoked.
-func NewFactoryFromConfig(cfg config.NamespacedRESTConfig) adapter.Factory {
+func NewFactoryFromConfig(cfg internalconfig.NamespacedRESTConfig) adapter.Factory {
 	return func(_ context.Context) (adapter.ResourceAdapter, error) {
 		client, err := NewClient(cfg)
 		if err != nil {

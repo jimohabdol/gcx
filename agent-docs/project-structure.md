@@ -12,7 +12,7 @@ grafanactl/
 │       ├── resources/        # 'resources' subcommand implementations
 │       ├── dashboards/       # 'dashboards' subcommand (snapshot via Image Renderer)
 │       ├── datasources/      # 'datasources' subcommand implementations
-│       ├── dev/              # 'dev' subcommand (import, scaffold)
+│       ├── dev/              # 'dev' subcommand (import, scaffold, generate, lint, serve)
 │       ├── query/            # 'query' subcommand implementation
 │       ├── providers/        # 'providers' subcommand implementation
 │       ├── fail/             # Error → DetailedError conversion, exit codes

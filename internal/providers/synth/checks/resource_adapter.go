@@ -3,7 +3,6 @@ package checks
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/grafana/grafanactl/internal/providers/synth/probes"
 	"github.com/grafana/grafanactl/internal/providers/synth/smcfg"
@@ -142,11 +141,12 @@ func (a *ResourceAdapter) List(ctx context.Context, _ metav1.ListOptions) (*unst
 	return result, nil
 }
 
-// Get returns a single check resource by name (numeric string ID).
+// Get returns a single check resource by name.
+// name may be a "slug-<id>" string (current format) or a legacy numeric string.
 func (a *ResourceAdapter) Get(ctx context.Context, name string, _ metav1.GetOptions) (*unstructured.Unstructured, error) {
-	id, err := strconv.ParseInt(name, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("check name must be a numeric ID, got %q: %w", name, err)
+	id, ok := extractIDFromSlug(name)
+	if !ok {
+		return nil, fmt.Errorf("could not extract numeric check ID from name %q", name)
 	}
 
 	check, err := a.client.Get(ctx, id)
@@ -254,11 +254,12 @@ func (a *ResourceAdapter) Update(ctx context.Context, obj *unstructured.Unstruct
 	return &updatedObj, nil
 }
 
-// Delete removes a check resource by name (numeric string ID).
+// Delete removes a check resource by name.
+// name may be a "slug-<id>" string (current format) or a legacy numeric string.
 func (a *ResourceAdapter) Delete(ctx context.Context, name string, _ metav1.DeleteOptions) error {
-	id, err := strconv.ParseInt(name, 10, 64)
-	if err != nil {
-		return fmt.Errorf("check name must be a numeric ID, got %q: %w", name, err)
+	id, ok := extractIDFromSlug(name)
+	if !ok {
+		return fmt.Errorf("could not extract numeric check ID from name %q", name)
 	}
 
 	if err := a.client.Delete(ctx, id); err != nil {

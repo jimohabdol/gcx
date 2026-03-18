@@ -307,6 +307,19 @@ Also reconstructs the object as a clean minimal structure (`apiVersion`, `kind`,
 
 Always applied first in the push pipeline (line 145 in push.go). Overwrites the `metadata.namespace` of every resource with the target context's namespace. This enables pulling from one org/stack and pushing to another without manually editing files.
 
+### Pull Output Directory Structure
+
+Files written by the pull pipeline use a versioned path that includes Kind, API version, and group:
+
+```
+{OutputDir}/{Kind}.{Version}.{Group}/{Name}.{ext}
+Example:  ./resources/Dashboard.v1alpha1.dashboard.grafana.app/my-dash.yaml
+```
+
+This replaces the old format (`{Kind}/{Name}.{ext}`) to make the API version
+and group unambiguous, which is important when multiple versions of the same
+resource type are pulled simultaneously.
+
 ### Pipeline Wiring
 
 ```
@@ -445,3 +458,5 @@ PartialGVK                         Descriptor
 | `internal/resources/adapter/adapter.go` | `ResourceAdapter` interface and `Factory` type |
 | `internal/resources/adapter/register.go` | Global `Register()`, `AllRegistrations()` for self-registration |
 | `internal/resources/adapter/router.go` | `ResourceClientRouter` — routes CRUD to adapter or dynamic client |
+| `internal/resources/discovery/openapi.go` | `SchemaFetcher` — fetches OpenAPI v3 schemas with disk caching; used by `resources schemas` |
+| `internal/config/context.go` | `ContextWithName` / `ContextNameFromCtx` — threads config context name through `context.Context` to adapter factories |

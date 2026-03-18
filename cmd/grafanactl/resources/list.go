@@ -17,15 +17,18 @@ import (
 )
 
 type listOpts struct {
-	IO cmdio.Options
+	IO       cmdio.Options
+	NoSchema bool
 }
 
 func (opts *listOpts) setup(flags *pflag.FlagSet) {
 	opts.IO.RegisterCustomCodec("text", &tabCodec{wide: false})
+	opts.IO.RegisterCustomCodec("table", &tabCodec{wide: false})
 	opts.IO.RegisterCustomCodec("wide", &tabCodec{wide: true})
 	opts.IO.DefaultFormat("text")
 
 	opts.IO.BindFlags(flags)
+	flags.BoolVar(&opts.NoSchema, "no-schema", false, "Skip fetching OpenAPI spec schemas (faster, omits schema info and unlistable resource types)")
 }
 
 func (opts *listOpts) Validate() error {
@@ -36,12 +39,16 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &listOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:   "schemas",
 		Args:  cobra.NoArgs,
-		Short: "List available Grafana API resources",
-		Long:  "List available Grafana API resources.",
+		Short: "List available Grafana API resource types",
+		Long:  "List available Grafana API resource types and their schemas.",
 		Example: `
-	grafanactl resources list
+	grafanactl resources schemas
+	grafanactl resources schemas -o wide
+	grafanactl resources schemas -o json
+	grafanactl resources schemas -o yaml
+	grafanactl resources schemas -o json --no-schema
 `,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
@@ -82,11 +89,28 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return codec.Encode(cmd.OutOrStdout(), map[string]any{"items": items})
 			}
 
-			if opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
-				return fmt.Errorf("unsupported output format: %s", opts.IO.OutputFormat)
+			// Fetch schemas regardless of output format (Pattern 13: format-agnostic
+			// data fetching). The --no-schema flag is the correct opt-out mechanism,
+			// not the output format. Tabular codecs simply ignore the schema data.
+			var schemas map[string]map[string]any
+			if !opts.NoSchema {
+				fetcher, fetchErr := discovery.NewSchemaFetcher(&cfg.Config)
+				if fetchErr != nil {
+					return fmt.Errorf("initializing schema fetcher: %w", fetchErr)
+				}
+				schemas, fetchErr = fetcher.FetchSpecSchemas(ctx, res)
+				if fetchErr != nil {
+					return fmt.Errorf("fetching schemas: %w", fetchErr)
+				}
 			}
 
-			return opts.IO.Encode(cmd.OutOrStdout(), res)
+			switch opts.IO.OutputFormat {
+			case "json", "yaml":
+				return opts.IO.Encode(cmd.OutOrStdout(), descriptorsToNested(res, schemas))
+			default:
+				// text/table/wide: tabular output.
+				return opts.IO.Encode(cmd.OutOrStdout(), res)
+			}
 		},
 	}
 
@@ -105,6 +129,55 @@ func descriptorToMap(d resources.Descriptor) map[string]any {
 		"singular": d.Singular,
 		"plural":   d.Plural,
 	}
+}
+
+// descriptorsToNested builds a nested group → version → []resource map for
+// JSON/YAML output. When schemas is non-nil, each resource entry includes a
+// "schema" key, and resources without an OpenAPI spec schema are dropped —
+// they typically represent unlistable sub-resources (connections, queryconvert)
+// that cannot be used for CRUD operations.
+func descriptorsToNested(descs resources.Descriptors, schemas map[string]map[string]any) map[string]any {
+	// Use typed intermediate maps to avoid unchecked type assertions.
+	type versionMap = map[string][]map[string]any
+	groups := make(map[string]versionMap)
+
+	for _, d := range descs {
+		group := d.GroupVersion.Group
+		version := d.GroupVersion.Version
+		gvk := group + "/" + version + "/" + d.Kind
+
+		entry := map[string]any{
+			"kind":     d.Kind,
+			"plural":   d.Plural,
+			"singular": d.Singular,
+		}
+
+		if schemas != nil {
+			s, ok := schemas[gvk]
+			if !ok {
+				// No schema → unlistable sub-resource; skip entirely.
+				continue
+			}
+			entry["schema"] = s
+		}
+
+		if groups[group] == nil {
+			groups[group] = make(versionMap)
+		}
+		groups[group][version] = append(groups[group][version], entry)
+	}
+
+	// Convert to map[string]any for JSON/YAML encoding.
+	result := make(map[string]any, len(groups))
+	for group, versions := range groups {
+		vm := make(map[string]any, len(versions))
+		for version, entries := range versions {
+			vm[version] = entries
+		}
+		result[group] = vm
+	}
+
+	return result
 }
 
 type tabCodec struct {

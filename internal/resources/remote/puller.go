@@ -11,6 +11,7 @@ import (
 	"github.com/grafana/grafanactl/internal/resources/discovery"
 	"github.com/grafana/grafanactl/internal/resources/dynamic"
 	"golang.org/x/sync/errgroup"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -122,22 +123,36 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) (*OperationSummary, 
 			case resources.FilterTypeAll:
 				res, err := p.client.List(ctx, filt.Descriptor, metav1.ListOptions{Limit: req.Limit})
 				if err != nil {
-					if req.StopOnError {
+					switch {
+					case isUnsupportedResourceType(err):
+						// 404/405 = sub-resource that can't be listed; skip silently
+						// regardless of StopOnError — these are never actionable.
+						logger.Debug("Skipping unsupported resource type", logs.Err(err), slog.String("cmd", filt.String()))
+						summary.RecordSkipped()
+					case req.StopOnError:
 						return err
+					default:
+						logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", filt.String()))
+						summary.RecordFailure(nil, err)
 					}
-					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", filt.String()))
-					summary.RecordFailure(nil, err)
 				} else {
 					partialRes[idx] = res.Items
 				}
 			case resources.FilterTypeMultiple:
 				res, err := p.client.GetMultiple(ctx, filt.Descriptor, filt.ResourceUIDs, metav1.GetOptions{})
 				if err != nil {
-					if req.StopOnError {
+					switch {
+					case isUnsupportedResourceType(err):
+						// 404/405 = sub-resource that can't be listed; skip silently
+						// regardless of StopOnError — these are never actionable.
+						logger.Debug("Skipping unsupported resource type", logs.Err(err), slog.String("cmd", filt.String()))
+						summary.RecordSkipped()
+					case req.StopOnError:
 						return err
+					default:
+						logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", filt.String()))
+						summary.RecordFailure(nil, err)
 					}
-					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", filt.String()))
-					summary.RecordFailure(nil, err)
 				} else {
 					partialRes[idx] = res
 				}
@@ -190,6 +205,18 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) (*OperationSummary, 
 	}
 
 	return summary, nil
+}
+
+// isUnsupportedResourceType reports whether a LIST/GET error indicates that the
+// resource type is registered in API discovery but does not actually support the
+// requested operation. These are common for datasource sub-resources (connections,
+// queryconvert) and other internal Grafana types.
+//
+// 404 (Not Found) and 405 (Method Not Allowed) are treated as "not listable" and
+// silently skipped. Other status codes (403, 500, 503, …) are still actionable
+// and reported as warnings.
+func isUnsupportedResourceType(err error) bool {
+	return apierrors.IsNotFound(err) || apierrors.IsMethodNotSupported(err)
 }
 
 func (p *Puller) process(res *resources.Resource, processors []Processor) error {

@@ -1,4 +1,4 @@
-## grafanactl linter lint
+## grafanactl dev lint run
 
 Lint Grafana resources
 
@@ -7,7 +7,7 @@ Lint Grafana resources
 Lint Grafana resources.
 
 ```
-grafanactl linter lint PATH... [flags]
+grafanactl dev lint run PATH... [flags]
 ```
 
 ### Examples
@@ -16,43 +16,43 @@ grafanactl linter lint PATH... [flags]
 
 	# Lint Grafana resources using builtin rules:
 
-	grafanactl linter lint ./resources
+	grafanactl dev lint run ./resources
 
 	# Lint specific files:
 
-	grafanactl linter lint ./resources/file.json ./resources/other.yaml
+	grafanactl dev lint run ./resources/file.json ./resources/other.yaml
 
 	# Display compact results:
 
-	grafanactl linter lint ./resources -o compact
+	grafanactl dev lint run ./resources -o compact
 
 	# Use custom rules:
 
-	grafanactl linter lint --rules ./custom-rules ./resources
+	grafanactl dev lint run --rules ./custom-rules ./resources
 
 	# Disable all rules for a resource type:
 
-	grafanactl linter lint --disable-resource dashboard ./resources
+	grafanactl dev lint run --disable-resource dashboard ./resources
 
 	# Disable all rules in a category:
 
-	grafanactl linter lint --disable-category idiomatic ./resources
+	grafanactl dev lint run --disable-category idiomatic ./resources
 
 	# Disable specific rules:
 
-	grafanactl linter lint --disable uneditable-dashboard --disable panel-title-description ./resources
+	grafanactl dev lint run --disable uneditable-dashboard --disable panel-title-description ./resources
 
 	# Enable rules for specific resource types:
 
-	grafanactl linter lint --disable-all --enable-resource dashboard ./resources
+	grafanactl dev lint run --disable-all --enable-resource dashboard ./resources
 
 	# Enable only some categories:
 
-	grafanactl linter lint --disable-all --enable-category idiomatic ./resources
+	grafanactl dev lint run --disable-all --enable-category idiomatic ./resources
 
 	# Enable only specific rules:
 
-	grafanactl linter lint --disable-all --enable uneditable-dashboard ./resources
+	grafanactl dev lint run --disable-all --enable uneditable-dashboard ./resources
 
 ```
 
@@ -68,7 +68,7 @@ grafanactl linter lint PATH... [flags]
       --enable-all                     Enable all rules
       --enable-category stringArray    Enable all rules in a category
       --enable-resource stringArray    Enable all rules for a resource type
-  -h, --help                           help for lint
+  -h, --help                           help for run
       --json string                    Comma-separated list of fields to include in JSON output, or '?' to discover available fields
       --max-concurrent int             Maximum number of concurrent operations (default 10)
   -o, --output string                  Output format. One of: compact, json, pretty, yaml (default "pretty")
@@ -78,13 +78,15 @@ grafanactl linter lint PATH... [flags]
 ### Options inherited from parent commands
 
 ```
-      --agent           Enable agent mode (JSON output, no color). Auto-detected from CLAUDECODE, CLAUDE_CODE, CURSOR_AGENT, GITHUB_COPILOT, AMAZON_Q, or GRAFANACTL_AGENT_MODE env vars.
-      --no-color        Disable color output
-      --no-truncate     Disable table column truncation (auto-enabled when stdout is piped)
-  -v, --verbose count   Verbose mode. Multiple -v options increase the verbosity (maximum: 3).
+      --agent            Enable agent mode (JSON output, no color). Auto-detected from CLAUDECODE, CLAUDE_CODE, CURSOR_AGENT, GITHUB_COPILOT, AMAZON_Q, or GRAFANACTL_AGENT_MODE env vars.
+      --config string    Path to the configuration file to use
+      --context string   Name of the context to use
+      --no-color         Disable color output
+      --no-truncate      Disable table column truncation (auto-enabled when stdout is piped)
+  -v, --verbose count    Verbose mode. Multiple -v options increase the verbosity (maximum: 3).
 ```
 
 ### SEE ALSO
 
-* [grafanactl linter](grafanactl_linter.md)	 - Lint Grafana resources
+* [grafanactl dev lint](grafanactl_dev_lint.md)	 - Lint Grafana resources
 

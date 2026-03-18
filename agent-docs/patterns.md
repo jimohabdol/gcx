@@ -411,7 +411,28 @@ falling back to the k8s dynamic client for non-provider resource types.
 - `internal/providers/synth/checks/resource_adapter.go`: Synthetic Monitoring implementation
 - `internal/providers/alert/resource_adapter.go`: Alert rules implementation
 
+**Synth checks identifier scheme (PR #35):** `metadata.name` is set to the job
+slug (a URL-safe version of the check job string via `slugifyJob()` in `adapter.go`),
+while `metadata.uid` stores the numeric API ID. On round-trips, the adapter recovers
+the numeric ID from `metadata.uid` (with a fallback to parsing `metadata.name` as a
+number for backward compatibility).
+
 **Usage:** When a provider resource type needs CRUD via `grafanactl resources`, implement `ResourceAdapter`, call `adapter.Register()` in `init()`, and call `RegistryIndex.RegisterStatic()` in `discovery.NewDefaultRegistry`.
+
+**Context threading for `--context` flag:** The selected config context name is
+threaded into adapter factories via Go's `context.Context` using helpers in
+`internal/config/context.go`:
+
+```go
+// Writer side (threaded in before factory is called):
+ctx = config.ContextWithName(ctx, contextName)
+
+// Reader side (inside adapter Factory):
+contextName := config.ContextNameFromCtx(ctx)
+```
+
+This lets adapters load the correct provider config for the active context
+without requiring an extra parameter on the `Factory` type.
 
 ---
 

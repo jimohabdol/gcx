@@ -54,6 +54,7 @@ type listOpts struct {
 
 func (o *listOpts) setup(flags *pflag.FlagSet) {
 	o.IO.RegisterCustomCodec("table", &sloTableCodec{})
+	o.IO.RegisterCustomCodec("wide", &sloTableCodec{Wide: true})
 	o.IO.DefaultFormat("table")
 	o.IO.BindFlags(flags)
 }
@@ -88,7 +89,7 @@ func newListCommand(loader RESTConfigLoader) *cobra.Command {
 			// Table codec operates on raw []Slo for direct field access.
 			// Other formats (yaml/json) convert to K8s envelope Resources
 			// for consistency with get/pull and round-trip support.
-			if opts.IO.OutputFormat == "table" {
+			if opts.IO.OutputFormat == "table" || opts.IO.OutputFormat == "wide" {
 				return opts.IO.Encode(cmd.OutOrStdout(), slos)
 			}
 
@@ -109,9 +110,16 @@ func newListCommand(loader RESTConfigLoader) *cobra.Command {
 }
 
 // sloTableCodec renders SLOs as a tabular table.
-type sloTableCodec struct{}
+type sloTableCodec struct {
+	Wide bool
+}
 
-func (c *sloTableCodec) Format() format.Format { return "table" }
+func (c *sloTableCodec) Format() format.Format {
+	if c.Wide {
+		return "wide"
+	}
+	return "table"
+}
 
 func (c *sloTableCodec) Encode(w io.Writer, v any) error {
 	slos, ok := v.([]Slo)
@@ -120,7 +128,11 @@ func (c *sloTableCodec) Encode(w io.Writer, v any) error {
 	}
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(tw, "UUID\tNAME\tTARGET\tWINDOW\tSTATUS")
+	if c.Wide {
+		fmt.Fprintln(tw, "UUID\tNAME\tTARGET\tWINDOW\tSTATUS\tDESCRIPTION")
+	} else {
+		fmt.Fprintln(tw, "UUID\tNAME\tTARGET\tWINDOW\tSTATUS")
+	}
 
 	for _, slo := range slos {
 		target := "-"
@@ -135,13 +147,17 @@ func (c *sloTableCodec) Encode(w io.Writer, v any) error {
 			status = slo.ReadOnly.Status.Type
 		}
 
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", slo.UUID, slo.Name, target, window, status)
+		if c.Wide {
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", slo.UUID, slo.Name, target, window, status, slo.Description)
+		} else {
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", slo.UUID, slo.Name, target, window, status)
+		}
 	}
 
 	return tw.Flush()
 }
 
-func (c *sloTableCodec) Decode(r io.Reader, v any) error {
+func (c *sloTableCodec) Decode(_ io.Reader, _ any) error {
 	return errors.New("table format does not support decoding")
 }
 

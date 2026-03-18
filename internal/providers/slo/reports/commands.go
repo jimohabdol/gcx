@@ -54,6 +54,7 @@ type listOpts struct {
 
 func (o *listOpts) setup(flags *pflag.FlagSet) {
 	o.IO.RegisterCustomCodec("table", &reportTableCodec{})
+	o.IO.RegisterCustomCodec("wide", &reportTableCodec{Wide: true})
 	o.IO.DefaultFormat("table")
 	o.IO.BindFlags(flags)
 }
@@ -88,7 +89,7 @@ func newListCommand(loader RESTConfigLoader) *cobra.Command {
 			// Table codec operates on raw []Report for direct field access.
 			// Other formats (yaml/json) convert to K8s envelope Resources
 			// for consistency with get/pull and round-trip support.
-			if opts.IO.OutputFormat == "table" {
+			if opts.IO.OutputFormat == "table" || opts.IO.OutputFormat == "wide" {
 				return opts.IO.Encode(cmd.OutOrStdout(), rpts)
 			}
 
@@ -109,9 +110,16 @@ func newListCommand(loader RESTConfigLoader) *cobra.Command {
 }
 
 // reportTableCodec renders reports as a tabular table.
-type reportTableCodec struct{}
+type reportTableCodec struct {
+	Wide bool
+}
 
-func (c *reportTableCodec) Format() format.Format { return "table" }
+func (c *reportTableCodec) Format() format.Format {
+	if c.Wide {
+		return "wide"
+	}
+	return "table"
+}
 
 func (c *reportTableCodec) Encode(w io.Writer, v any) error {
 	rpts, ok := v.([]Report)
@@ -120,18 +128,31 @@ func (c *reportTableCodec) Encode(w io.Writer, v any) error {
 	}
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(tw, "UUID\tNAME\tTIME_SPAN\tSLOS")
+	if c.Wide {
+		fmt.Fprintln(tw, "UUID\tNAME\tTIME_SPAN\tSLOS\tSLO_UUIDS")
+	} else {
+		fmt.Fprintln(tw, "UUID\tNAME\tTIME_SPAN\tSLOS")
+	}
 
 	for _, report := range rpts {
 		timeSpan := mapTimeSpan(report.TimeSpan)
 		sloCount := len(report.ReportDefinition.Slos)
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%d\n", report.UUID, report.Name, timeSpan, sloCount)
+
+		if c.Wide {
+			sloUUIDs := make([]string, 0, sloCount)
+			for _, s := range report.ReportDefinition.Slos {
+				sloUUIDs = append(sloUUIDs, s.SloUUID)
+			}
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%d\t%s\n", report.UUID, report.Name, timeSpan, sloCount, strings.Join(sloUUIDs, ","))
+		} else {
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%d\n", report.UUID, report.Name, timeSpan, sloCount)
+		}
 	}
 
 	return tw.Flush()
 }
 
-func (c *reportTableCodec) Decode(r io.Reader, v any) error {
+func (c *reportTableCodec) Decode(_ io.Reader, _ any) error {
 	return errors.New("table format does not support decoding")
 }
 

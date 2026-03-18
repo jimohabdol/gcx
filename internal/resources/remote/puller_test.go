@@ -8,6 +8,7 @@ import (
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/resources/remote"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -91,6 +92,7 @@ func TestPuller_Pull(t *testing.T) {
 		wantError        bool
 		wantSuccessCount int
 		wantFailedCount  int
+		wantSkippedCount int
 	}{
 		{
 			name: "all resources succeed",
@@ -130,6 +132,59 @@ func TestPuller_Pull(t *testing.T) {
 			wantError:        false,
 			wantSuccessCount: 0,
 			wantFailedCount:  0,
+		},
+		{
+			name:        "404 NotFound is skipped, not counted as failure",
+			listResults: map[string][]unstructured.Unstructured{},
+			listErrors: map[string]error{
+				"dashboards": apierrors.NewNotFound(
+					schema.GroupResource{Group: "dashboard.grafana.app", Resource: "dashboards"}, ""),
+			},
+			stopOnError:      false,
+			wantError:        false,
+			wantSuccessCount: 0,
+			wantFailedCount:  0,
+			wantSkippedCount: 1,
+		},
+		{
+			name:        "405 MethodNotAllowed is skipped, not counted as failure",
+			listResults: map[string][]unstructured.Unstructured{},
+			listErrors: map[string]error{
+				"dashboards": apierrors.NewMethodNotSupported(
+					schema.GroupResource{Group: "datasource.grafana.app", Resource: "queryconvert"}, "list"),
+			},
+			stopOnError:      false,
+			wantError:        false,
+			wantSuccessCount: 0,
+			wantFailedCount:  0,
+			wantSkippedCount: 1,
+		},
+		{
+			name:        "404 NotFound with StopOnError=true is skipped, not an error",
+			listResults: map[string][]unstructured.Unstructured{},
+			listErrors: map[string]error{
+				"dashboards": apierrors.NewNotFound(
+					schema.GroupResource{Group: "dashboard.grafana.app", Resource: "dashboards"}, ""),
+			},
+			stopOnError:      true,
+			wantError:        false,
+			wantSuccessCount: 0,
+			wantFailedCount:  0,
+			wantSkippedCount: 1,
+		},
+		{
+			name:        "403 Forbidden is still counted as failure",
+			listResults: map[string][]unstructured.Unstructured{},
+			listErrors: map[string]error{
+				"dashboards": apierrors.NewForbidden(
+					schema.GroupResource{Group: "dashboard.grafana.app", Resource: "dashboards"}, "list",
+					errors.New("access denied")),
+			},
+			stopOnError:      false,
+			wantError:        false,
+			wantSuccessCount: 0,
+			wantFailedCount:  1,
+			wantSkippedCount: 0,
 		},
 	}
 
@@ -172,6 +227,7 @@ func TestPuller_Pull(t *testing.T) {
 			req.NotNil(summary)
 			req.Equal(tc.wantSuccessCount, summary.SuccessCount())
 			req.Equal(tc.wantFailedCount, summary.FailedCount())
+			req.Equal(tc.wantSkippedCount, summary.SkippedCount())
 			req.Len(summary.Failures(), tc.wantFailedCount)
 
 			// For failure cases, verify the failure has a nil resource (filter-level failure)

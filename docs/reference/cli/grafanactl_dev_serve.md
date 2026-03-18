@@ -1,4 +1,4 @@
-## grafanactl resources serve
+## grafanactl dev serve
 
 Serve Grafana resources locally
 
@@ -19,7 +19,7 @@ support for file notifications.
 
 
 ```
-grafanactl resources serve [RESOURCE_DIR]... [flags]
+grafanactl dev serve [RESOURCE_DIR]... [flags]
 ```
 
 ### Examples
@@ -27,14 +27,14 @@ grafanactl resources serve [RESOURCE_DIR]... [flags]
 ```
 
 	# Serve resources from a directory:
-	grafanactl resources serve ./resources
+	grafanactl dev serve ./resources
 
 	# Serve resources from a directory but don't watch for changes:
-	grafanactl resources serve ./resources --no-watch
+	grafanactl dev serve ./resources --no-watch
 
 	# Serve resources from a script that outputs a YAML resource and watch for changes:
 	# Note: the Grafana Foundation SDK can be used to generate dashboards (https://grafana.github.io/grafana-foundation-sdk/)
-	grafanactl resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format yaml
+	grafanactl dev serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format yaml
 
 ```
 
@@ -64,5 +64,5 @@ grafanactl resources serve [RESOURCE_DIR]... [flags]
 
 ### SEE ALSO
 
-* [grafanactl resources](grafanactl_resources.md)	 - Manipulate Grafana resources
+* [grafanactl dev](grafanactl_dev.md)	 - Manage Grafana resources as code
 

@@ -35,10 +35,9 @@ grafanactl (root)
 │   ├── delete [SELECTOR]...
 │   ├── edit   SELECTOR
 │   ├── get    [SELECTOR]...
-│   ├── list
+│   ├── schemas              [formerly "list"; --no-schema flag to skip OpenAPI fetch]
 │   ├── pull   [SELECTOR]...
 │   ├── push   [SELECTOR]...
-│   ├── serve  [DIR]...
 │   └── validate [SELECTOR]...
 │
 ├── dashboards               [cmd/grafanactl/dashboards/command.go]
@@ -84,16 +83,16 @@ grafanactl (root)
 ├── providers                [cmd/grafanactl/providers/command.go]
 │   └── (list; no subcommands — prints NAME/DESCRIPTION table of registered providers)
 │
-├── linter                   [cmd/grafanactl/linter/command.go]
-│   ├── lint                 Lint resources against configured rules
-│   ├── new                  Scaffold a new linter rule
-│   ├── rules                List available linter rules
-│   └── test                 Run rule test suite
-│
 └── dev                      [cmd/grafanactl/dev/command.go]
     ├── generate [FILE_PATH]... Generate typed Go stubs for new resources
     ├── import               Import existing Grafana resources as code
-    └── scaffold             Scaffold a new grafanactl-based project
+    ├── scaffold             Scaffold a new grafanactl-based project
+    ├── serve  [DIR]...      Serve resources locally (moved from resources serve)
+    └── lint                 Lint resources (moved from top-level linter command)
+        ├── run              Lint resources against configured rules [Use: "run"]
+        ├── new              Scaffold a new linter rule
+        ├── rules            List available linter rules
+        └── test             Run rule test suite
 ```
 
 Key: SELECTOR = `kind[/name[,name...]]` or long form `kind.group/name`
@@ -208,13 +207,13 @@ cmd/grafanactl/
 ├── resources/
 │   ├── command.go           resources group (wires configOpts to all subcommands)
 │   ├── get.go               resources get
-│   ├── list.go              resources list
+│   ├── list.go              resources schemas  [Use: "schemas"; formerly "list"]
 │   ├── pull.go              resources pull
 │   ├── push.go              resources push
 │   ├── delete.go            resources delete
 │   ├── edit.go              resources edit
 │   ├── validate.go          resources validate
-│   ├── serve.go             resources serve
+│   ├── serve.go             dev serve (exported as ServeCmd; formerly resources serve)
 │   ├── fetch.go             SHARED: remote fetch helper used by get/edit/delete
 │   ├── onerror.go           SHARED: OnErrorMode type + --on-error flag binding
 │   └── editor.go            SHARED: interactive editor (EDITOR env var)
@@ -235,13 +234,13 @@ cmd/grafanactl/
 ├── providers/
 │   └── command.go           providers command — lists registered providers
 ├── linter/
-│   ├── command.go           linter group (lint, new, rules, test subcommands)
-│   ├── lint.go              linter lint — lint resources against configured rules
-│   ├── new.go               linter new — scaffold a new linter rule
-│   ├── rules.go             linter rules — list available linter rules
-│   └── test.go              linter test — run rule test suite
+│   ├── command.go           lint subgroup (run, new, rules, test subcommands; mounted under dev lint)
+│   ├── lint.go              dev lint run — lint resources against configured rules  [Use: "run"]
+│   ├── new.go               dev lint new — scaffold a new linter rule
+│   ├── rules.go             dev lint rules — list available linter rules
+│   └── test.go              dev lint test — run rule test suite
 ├── dev/
-│   ├── command.go           dev group (generate, import, scaffold subcommands)
+│   ├── command.go           dev group (generate, import, scaffold, lint, serve subcommands)
 │   ├── generate.go          dev generate — generate typed Go stubs for new resources
 │   ├── import.go            dev import — import Grafana resources as code
 │   ├── scaffold.go          dev scaffold — scaffold a new project
@@ -510,7 +509,9 @@ print available fields via `DiscoverFields()` and exit early (exit 0).
 
 Built-in codecs: `json` and `yaml` (always available). Commands register additional ones (e.g. `text`, `wide`, `graph`) by calling `RegisterCustomCodec` before `BindFlags`.
 
-The `graph` codec is a special-purpose output format only available on the `query` command. It renders Prometheus or Loki query results as a terminal line chart using `ntcharts` and `lipgloss` (via `internal/graph`). Terminal width is detected at render time via `golang.org/x/term`.
+The `graph` codec is a special-purpose output format available on the `query` command and `synth checks status`. It renders Prometheus or Loki query results (or check status metrics) as a terminal line chart using `ntcharts` and `lipgloss` (via `internal/graph`). Terminal width is detected at render time via `golang.org/x/term`.
+
+The `wide` codec is available on `slo definitions list`, `slo reports list`, and `synth checks status`. It shows additional detail columns compared to the default `text` table codec.
 
 ### `FieldSelectCodec` — JSON Field Filtering
 

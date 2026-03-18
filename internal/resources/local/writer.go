@@ -17,16 +17,18 @@ import (
 
 type FileNamer func(resource *resources.Resource) (string, error)
 
-// GroupResourcesByKind organizes resources by kind, writing resources in a
-// folder named after their kind.
-// File names are generated as follows: `{Kind}/{Name}.{extension}`.
+// GroupResourcesByKind organizes resources by their full GVK, writing resources
+// in a folder named after their kind, version, and group to disambiguate
+// resources that share the same kind name across different API groups.
+// File names are generated as follows: `{Kind}.{Version}.{Group}/{Name}.{extension}`.
 func GroupResourcesByKind(extension string) FileNamer {
 	return func(resource *resources.Resource) (string, error) {
 		if resource.Name() == "" {
 			return "", errors.New("resource has no name")
 		}
 
-		return filepath.Join(resource.Kind(), resource.Name()+"."+extension), nil
+		dir := resource.Kind() + "." + resource.Version() + "." + resource.Group()
+		return filepath.Join(dir, resource.Name()+"."+extension), nil
 	}
 }
 

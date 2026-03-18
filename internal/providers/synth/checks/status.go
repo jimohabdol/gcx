@@ -78,6 +78,7 @@ type statusOpts struct {
 func (o *statusOpts) setup(flags *pflag.FlagSet) {
 	o.IO.RegisterCustomCodec("table", &StatusTableCodec{})
 	o.IO.RegisterCustomCodec("wide", &StatusTableCodec{Wide: true})
+	o.IO.RegisterCustomCodec("graph", &StatusGraphCodec{})
 	o.IO.DefaultFormat("table")
 	o.IO.BindFlags(flags)
 
@@ -1016,4 +1017,51 @@ func (c *TimelineTableCodec) Encode(w io.Writer, v any) error {
 
 func (c *TimelineTableCodec) Decode(_ io.Reader, _ any) error {
 	return errors.New("TimelineTableCodec: decode not supported")
+}
+
+// ---------------------------------------------------------------------------
+// Status graph codec
+// ---------------------------------------------------------------------------
+
+type StatusGraphCodec struct{}
+
+func (c *StatusGraphCodec) Format() format.Format { return "graph" }
+
+func (c *StatusGraphCodec) Encode(w io.Writer, v any) error {
+	results, ok := v.([]CheckStatusResult)
+	if !ok {
+		return fmt.Errorf("StatusGraphCodec: expected []CheckStatusResult, got %T", v)
+	}
+
+	if len(results) == 0 {
+		fmt.Fprintln(w, "No checks found.")
+		return nil
+	}
+
+	items := make([]graph.PercentageBarItem, 0, len(results))
+	for _, r := range results {
+		if r.Success == nil {
+			continue
+		}
+		label := r.Job
+		if label == "" {
+			label = fmt.Sprintf("check-%d", r.ID)
+		}
+		items = append(items, graph.PercentageBarItem{
+			Name:  label,
+			Value: *r.Success * 100,
+		})
+	}
+
+	if len(items) == 0 {
+		fmt.Fprintln(w, "No metric data available for graph rendering.")
+		return nil
+	}
+
+	opts := graph.DefaultChartOptions()
+	return graph.RenderPercentageBars(w, "Synthetic Monitoring Check Success Rate", items, opts)
+}
+
+func (c *StatusGraphCodec) Decode(_ io.Reader, _ any) error {
+	return errors.New("StatusGraphCodec: decode not supported")
 }

@@ -67,8 +67,8 @@ func TestFSWriter_Write_groupedByKind(t *testing.T) {
 	err := writer.Write(t.Context(), testResources())
 	req.NoError(err)
 
-	req.FileExists(filepath.Join(outputDir, "Folder", "folder-uid.json"))
-	req.FileExists(filepath.Join(outputDir, "ServiceAccount", "sa-uid.json"))
+	req.FileExists(filepath.Join(outputDir, "Folder.v0alpha1.folder.grafana.app", "folder-uid.json"))
+	req.FileExists(filepath.Join(outputDir, "ServiceAccount.v0alpha1.iam.grafana.app", "sa-uid.json"))
 }
 
 func TestFSWriter_Write_doesNothingWithNoResources(t *testing.T) {

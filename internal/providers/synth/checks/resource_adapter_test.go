@@ -104,7 +104,9 @@ func TestResourceAdapter_List(t *testing.T) {
 	item := list.Items[0]
 	assert.Equal(t, checks.APIVersion, item.GetAPIVersion())
 	assert.Equal(t, checks.Kind, item.GetKind())
-	assert.Equal(t, "1001", item.GetName())
+	// metadata.name includes the numeric ID suffix for uniqueness; metadata.uid also carries it.
+	assert.Equal(t, "web-check-1001", item.GetName())
+	assert.Equal(t, "1001", string(item.GetUID()))
 	assert.Equal(t, "default", item.GetNamespace())
 
 	spec, ok := item.Object["spec"].(map[string]any)
@@ -135,7 +137,9 @@ func TestResourceAdapter_Get(t *testing.T) {
 
 	assert.Equal(t, checks.APIVersion, obj.GetAPIVersion())
 	assert.Equal(t, checks.Kind, obj.GetKind())
-	assert.Equal(t, "1001", obj.GetName())
+	// metadata.name includes the numeric ID suffix; metadata.uid also carries it.
+	assert.Equal(t, "web-check-1001", obj.GetName())
+	assert.Equal(t, "1001", string(obj.GetUID()))
 }
 
 func TestResourceAdapter_Get_NonNumericName(t *testing.T) {
@@ -147,7 +151,7 @@ func TestResourceAdapter_Get_NonNumericName(t *testing.T) {
 
 	_, err = a.Get(context.Background(), "not-a-number", metav1.GetOptions{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "numeric ID")
+	assert.Contains(t, err.Error(), "numeric check ID")
 }
 
 func TestResourceAdapter_Delete_NonNumericName(t *testing.T) {
@@ -159,7 +163,7 @@ func TestResourceAdapter_Delete_NonNumericName(t *testing.T) {
 
 	err = a.Delete(context.Background(), "not-a-number", metav1.DeleteOptions{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "numeric ID")
+	assert.Contains(t, err.Error(), "numeric check ID")
 }
 
 func TestResourceAdapter_Create(t *testing.T) {

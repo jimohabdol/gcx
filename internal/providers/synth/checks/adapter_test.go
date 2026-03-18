@@ -29,7 +29,9 @@ func TestToResource(t *testing.T) {
 	res, err := checks.ToResource(check, "default", testProbeNames())
 	require.NoError(t, err)
 
-	assert.Equal(t, "8127", res.Raw.GetName())
+	// metadata.name includes the numeric ID suffix for uniqueness; metadata.uid also carries it.
+	assert.Equal(t, "grafana-com-health-8127", res.Raw.GetName())
+	assert.Equal(t, "8127", string(res.Raw.GetUID()))
 	assert.Equal(t, "default", res.Raw.GetNamespace())
 
 	obj := res.Object.Object
@@ -103,7 +105,9 @@ func TestFromResource_RoundTrip(t *testing.T) {
 	assert.Equal(t, []string{"Oregon", "Spain"}, spec.Probes)
 }
 
-func TestFromResource_NonNumericNameReturnsZeroID(t *testing.T) {
+func TestFromResource_NoUIDReturnsZeroID(t *testing.T) {
+	// A resource with no uid (new check, not yet synced to the SM API) should
+	// round-trip with id=0 so the push command creates a new check.
 	check := checks.Check{
 		ID:     0,
 		Job:    "new-check",
@@ -111,15 +115,11 @@ func TestFromResource_NonNumericNameReturnsZeroID(t *testing.T) {
 		Probes: []int64{166},
 	}
 
-	// Manually build a resource with a non-numeric name.
 	res, err := checks.ToResource(check, "default", testProbeNames())
 	require.NoError(t, err)
 
-	// Override the name to non-numeric (simulating a new check YAML).
-	res.Object.Object["metadata"] = map[string]any{
-		"name":      "my-new-check",
-		"namespace": "default",
-	}
+	// ID=0 means no uid is stored.
+	assert.Empty(t, res.Raw.GetUID())
 
 	spec, id, err := checks.FromResource(res)
 	require.NoError(t, err)

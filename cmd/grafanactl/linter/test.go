@@ -50,7 +50,7 @@ func testCmd() *cobra.Command {
 		Example: `
 	# Run all tests in a directory:
 
-	grafanactl linter test ./internal/linter/bundle/grafanactl/
+	grafanactl dev lint test ./internal/linter/bundle/grafanactl/
 `,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

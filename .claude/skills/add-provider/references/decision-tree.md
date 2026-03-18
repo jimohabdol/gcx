@@ -24,7 +24,7 @@ Does the product expose a K8s-compatible API via Grafana's /apis endpoint?
 ### Use `grafanactl resources` (NO provider needed) when:
 
 - The product registers K8s-style CRDs accessible via `/apis/{group}/{version}/...`
-- Resources appear in `grafanactl resources list`
+- Resources appear in `grafanactl resources schemas`
 - Standard CRUD operations work via the dynamic client
 - No product-specific auth beyond the Grafana service account token
 
@@ -48,7 +48,7 @@ in its `init()` function), its resource types become accessible through the
 unified `grafanactl resources` command:
 
 ```
-grafanactl resources list slo         # replaces: grafanactl slo definitions list
+grafanactl resources get slo           # replaces: grafanactl slo definitions list
 grafanactl resources get slo/<uuid>   # replaces: grafanactl slo definitions get <uuid>
 grafanactl resources push slo -p ./   # replaces: grafanactl slo definitions push
 grafanactl resources pull slo -p ./   # replaces: grafanactl slo definitions pull

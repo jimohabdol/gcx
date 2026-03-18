@@ -32,7 +32,9 @@ func (p *AlertProvider) Commands() []*cobra.Command {
 			if root := cmd.Root(); root.PersistentPreRun != nil {
 				root.PersistentPreRun(cmd, args)
 			}
-			providers.WarnDeprecated(cmd, "grafanactl resources list rules")
+			if providers.IsCRUDCommand(cmd) {
+				providers.WarnDeprecated(cmd, "grafanactl resources schemas rules")
+			}
 		},
 	}
 

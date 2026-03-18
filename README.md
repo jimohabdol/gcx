@@ -71,7 +71,7 @@ grafanactl config check
 
 ```bash
 # Discover available resource types
-grafanactl resources list
+grafanactl resources schemas
 
 # Get all dashboards
 grafanactl resources get dashboards -o json
@@ -107,7 +107,7 @@ grafanactl resources edit dashboards/my-dashboard
 - Use `--force` on `delete` when deleting all resources of a kind (e.g., `delete dashboards --force`)
 - All commands except `edit` are non-interactive — safe to run in pipelines without hanging on prompts
 - Prefer targeted selectors (`dashboards/my-dash`) over broad fetches (`dashboards`) to reduce response size and token usage — pagination is handled automatically, so all results are returned in a single response
-- Use `resources list` first to discover available resource types — don't guess `apiVersion` or `kind` values
+- Use `resources schemas` first to discover available resource types — don't guess `apiVersion` or `kind` values
 - **`get` vs `pull`:** `get` writes to stdout (for reading/inspecting), `pull` writes to files on disk (for editing and pushing back). Use `get` to inspect, `pull` to start a modify workflow.
 
 ### Common Patterns
@@ -122,11 +122,11 @@ grafanactl resources get dashboards/my-dashboard -o json > /dev/null 2>&1
 **Pull → edit → push round-trip:**
 
 ```bash
-# 1. Pull a dashboard to disk (creates ./resources/Dashboard/my-dashboard.yaml)
+# 1. Pull a dashboard to disk (creates ./resources/Dashboard.v1.dashboard.grafana.app/my-dashboard.yaml)
 grafanactl resources pull dashboards/my-dashboard -p ./resources -o yaml
 
 # 2. Edit the file (agent modifies spec fields, e.g. title, panels)
-#    File is at: ./resources/Dashboard/my-dashboard.yaml
+#    File is at: ./resources/Dashboard.v1.dashboard.grafana.app/my-dashboard.yaml
 
 # 3. Validate before pushing
 grafanactl resources validate -p ./resources -o json
@@ -135,13 +135,13 @@ grafanactl resources validate -p ./resources -o json
 grafanactl resources push -p ./resources
 ```
 
-Pull organizes files as `{Kind}/{Name}.{ext}` under the `-p` path:
+Pull organizes files as `{Kind}.{Version}.{Group}/{Name}.{ext}` under the `-p` path:
 
 ```
 ./resources/
-├── Dashboard/
+├── Dashboard.v1.dashboard.grafana.app/
 │   └── my-dashboard.yaml
-└── Folder/
+└── Folder.v1beta1.folder.grafana.app/
     └── my-folder.yaml
 ```
 
@@ -281,11 +281,11 @@ spec:
 
 **Resource relationships:** Dashboards can belong to folders via the `grafana.app/folder` annotation in `metadata.annotations`. When pushing, grafanactl automatically pushes folders before dashboards to satisfy dependencies.
 
-Use `grafanactl resources list -o wide` to discover available `apiVersion` and `kind` values for your Grafana instance.
+Use `grafanactl resources schemas -o wide` to discover available `apiVersion` and `kind` values for your Grafana instance.
 
 ### Command Output Examples
 
-**`resources list -o json`** — returns available resource types:
+**`resources schemas -o json`** — returns available resource types:
 
 ```json
 [
@@ -420,13 +420,13 @@ Grafana CLI includes a built-in development server with live reload:
 
 ```bash
 # Serve resources from a directory
-grafanactl resources serve ./resources
+grafanactl dev serve ./resources
 
 # With a generation script (e.g., grafana-foundation-sdk)
-grafanactl resources serve --script 'go run ./dashboards/...' --script-format yaml
+grafanactl dev serve --script 'go run ./dashboards/...' --script-format yaml
 
 # Custom port
-grafanactl resources serve ./resources --port 3001
+grafanactl dev serve ./resources --port 3001
 ```
 
 The server provides:
@@ -437,7 +437,7 @@ The server provides:
 - Script execution for code-generated dashboards
 
 > [!NOTE]
-> The `kubernetesDashboards` feature toggle must be enabled in Grafana for `resources serve`.
+> The `kubernetesDashboards` feature toggle must be enabled in Grafana for `dev serve`.
 
 ## Claude Code Plugin
 

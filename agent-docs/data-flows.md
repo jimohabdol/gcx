@@ -151,6 +151,10 @@ Entry point: `cmd/grafanactl/resources/pull.go` (mirrors push structure).
   │      FilterTypeMultiple → client.GetMultiple(ctx, desc, names, ...)  │
   │      FilterTypeSingle   → client.Get(ctx, desc, name, ...)           │
   │                                                                       │
+  │    404 / 405 responses: silently skipped (not counted as errors).    │
+  │    Some resource types discovered via the API may not support List   │
+  │    or Get; the pull pipeline ignores them rather than failing.       │
+  │                                                                       │
   │    errg.Wait() — collect all results                                  │
   └───────────────────────┬──────────────────────────────────────────────┘
                           │
@@ -175,7 +179,8 @@ Entry point: `cmd/grafanactl/resources/pull.go` (mirrors push structure).
   │ 4. Write to disk (FSWriter)                                           │
   │    local.FSWriter{Path, Namer, Encoder}                              │
   │    Namer strategy: GroupResourcesByKind(ext)                         │
-  │      → {Kind}/{Name}.{ext}  (e.g. Dashboard/my-dash.yaml)            │
+  │      → {Kind}.{Version}.{Group}/{Name}.{ext}                         │
+  │        e.g. Dashboard.v1alpha1.dashboard.grafana.app/my-dash.yaml    │
   │                                                                       │
   │    Sequential write (no concurrency in FSWriter):                    │
   │      For each resource: writer.writeSingle(resource)                 │
@@ -253,6 +258,12 @@ ResourceAdapter    k8s DynamicClient
 
 Adapters are lazily initialized (factory called once, result cached). For read-only
 provider types (Alert rules/groups), Create/Update/Delete return `errors.ErrUnsupported`.
+
+The `--context` flag (Grafana config context name) is threaded into adapter
+factories via `context.Context` using `config.ContextWithName` / `config.ContextNameFromCtx`
+helpers (`internal/config/context.go`). This lets adapter factories look up the
+correct provider config for the selected context without requiring a separate
+parameter.
 
 This routing is transparent to processors, selectors, and the CLI layer — they
 interact with the same Pusher/Puller/Deleter interface regardless of whether the
@@ -529,8 +540,8 @@ for each resource in resources.AsList():
 ```
 
 `GroupResourcesByKind(ext)` is the standard `FileNamer`:
-  - Output: `{OutputDir}/{Kind}/{Name}.{ext}`
-  - Example: `./resources/Dashboard/my-dashboard.yaml`
+  - Output: `{OutputDir}/{Kind}.{Version}.{Group}/{Name}.{ext}`
+  - Example: `./resources/Dashboard.v1alpha1.dashboard.grafana.app/my-dashboard.yaml`
 
 The encoder is fixed at construction time (caller chooses JSON or YAML). Unlike
 FSReader which detects format per-file, FSWriter uses a single encoder for all output.
@@ -578,6 +589,8 @@ a pull-then-push workflow will write back in the same format as the original fil
 ## 9. SERVE Pipeline
 
 Entry point: `internal/server/server.go:55` (`Server.Start`).
+
+Command: `grafanactl dev serve [DIR]...` (the serve command moved from `resources serve` to `dev serve` in PR #35; the implementation is unchanged).
 
 ```
 Startup sequence:

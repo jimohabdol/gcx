@@ -1,9 +1,11 @@
 package resources
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 
@@ -11,8 +13,10 @@ import (
 	"github.com/grafana/grafanactl/cmd/grafanactl/fail"
 	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/agent"
+	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources/discovery"
 	"github.com/grafana/grafanactl/internal/terminal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -29,6 +33,72 @@ func printFieldDiscoveryResults(out io.Writer, obj map[string]any) {
 	for _, field := range cmdio.DiscoverFields(obj) {
 		fmt.Fprintln(out, field)
 	}
+}
+
+// schemaToFieldPaths converts an OpenAPI spec schema to field paths compatible
+// with the --json ? output format (top-level keys + spec.* sub-fields).
+func schemaToFieldPaths(specSchema map[string]any) []string {
+	// Always include the standard K8s envelope fields.
+	paths := []string{"apiVersion", "kind", "metadata", "spec", "status"}
+
+	if props, ok := specSchema["properties"].(map[string]any); ok {
+		for key := range props {
+			paths = append(paths, "spec."+key)
+		}
+	}
+
+	sort.Strings(paths)
+	return paths
+}
+
+// discoverFieldsViaOpenAPI resolves field paths for a resource type using the
+// OpenAPI v3 schema endpoint. Returns an error if the schema is unavailable
+// (e.g. provider-backed resources), in which case the caller should fall back
+// to sample-fetch introspection.
+func discoverFieldsViaOpenAPI(ctx context.Context, cfg config.NamespacedRESTConfig, args []string) ([]string, error) {
+	sels, err := resources.ParseSelectors(args)
+	if err != nil {
+		return nil, err
+	}
+
+	reg, err := discovery.NewDefaultRegistry(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	filters, err := reg.MakeFilters(discovery.MakeFiltersOptions{
+		Selectors:            sels,
+		PreferredVersionOnly: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(filters) == 0 {
+		return nil, errors.New("no matching resource types")
+	}
+
+	// Use the first filter's descriptor.
+	desc := filters[0].Descriptor
+	descs := resources.Descriptors{desc}
+
+	fetcher, err := discovery.NewSchemaFetcher(&cfg.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	schemas, err := fetcher.FetchSpecSchemas(ctx, descs)
+	if err != nil {
+		return nil, err
+	}
+
+	key := desc.GroupVersion.Group + "/" + desc.GroupVersion.Version + "/" + desc.Kind
+	specSchema, ok := schemas[key]
+	if !ok {
+		return nil, fmt.Errorf("no OpenAPI schema for %s", key)
+	}
+
+	return schemaToFieldPaths(specSchema), nil
 }
 
 type getOpts struct {
@@ -125,6 +195,19 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
+			// --json ? discovery: try OpenAPI schema first (no instances needed),
+			// fall back to fetching a sample resource if OpenAPI is unavailable.
+			if opts.IO.JSONDiscovery {
+				fields, schemaErr := discoverFieldsViaOpenAPI(ctx, cfg, args)
+				if schemaErr == nil {
+					for _, f := range fields {
+						fmt.Fprintln(cmd.OutOrStdout(), f)
+					}
+					return nil
+				}
+				// Fall through to sample-fetch approach.
+			}
+
 			fetchReq := FetchRequest{
 				Config:      cfg,
 				StopOnError: opts.OnError.StopOnError(),
@@ -142,8 +225,7 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			output := res.Resources.ToUnstructuredList()
 			resources.SortUnstructured(output.Items)
 
-			// --json ? discovery: print available fields from the first fetched
-			// resource and exit without producing normal output.
+			// --json ? discovery fallback: print fields from a fetched sample.
 			if opts.IO.JSONDiscovery {
 				if len(output.Items) == 0 {
 					return errors.New("no resources found for field discovery: provide a selector that matches at least one resource")

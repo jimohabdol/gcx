@@ -12,6 +12,7 @@ import (
 type OperationSummary struct {
 	successCount atomic.Int64
 	failedCount  atomic.Int64
+	skippedCount atomic.Int64
 	mu           sync.Mutex
 	failures     []OperationFailure
 }
@@ -29,6 +30,12 @@ type OperationFailure struct {
 // RecordSuccess records a successful operation.
 func (s *OperationSummary) RecordSuccess() {
 	s.successCount.Add(1)
+}
+
+// RecordSkipped records a resource type that was skipped because the API does
+// not support the requested operation (e.g. 404 or 405 on LIST).
+func (s *OperationSummary) RecordSkipped() {
+	s.skippedCount.Add(1)
 }
 
 // RecordFailure records a failed operation. res may be nil when the failure is not
@@ -53,6 +60,12 @@ func (s *OperationSummary) SuccessCount() int {
 // FailedCount returns the number of failed resource operations.
 func (s *OperationSummary) FailedCount() int {
 	return int(s.failedCount.Load())
+}
+
+// SkippedCount returns the number of resource types skipped because the API
+// does not support the requested operation.
+func (s *OperationSummary) SkippedCount() int {
+	return int(s.skippedCount.Load())
 }
 
 // Failures returns all recorded operation failures.

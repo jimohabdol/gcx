@@ -60,7 +60,9 @@ func (p *SynthProvider) Commands() []*cobra.Command {
 			if root := cmd.Root(); root.PersistentPreRun != nil {
 				root.PersistentPreRun(cmd, args)
 			}
-			providers.WarnDeprecated(cmd, "grafanactl resources list checks")
+			if providers.IsCRUDCommand(cmd) {
+				providers.WarnDeprecated(cmd, "grafanactl resources schemas checks")
+			}
 		},
 	}
 
@@ -255,12 +257,18 @@ func (l *configLoader) loadConfig(ctx context.Context, validator config.Override
 		envOverride,
 	}
 
-	if l.ctxName != "" {
+	// Resolve context name: explicit flag takes priority, then context.Context carrier
+	// (set by resource commands to honour the --context flag for provider adapters).
+	ctxName := l.ctxName
+	if ctxName == "" {
+		ctxName = config.ContextNameFromCtx(ctx)
+	}
+	if ctxName != "" {
 		overrides = append(overrides, func(cfg *config.Config) error {
-			if !cfg.HasContext(l.ctxName) {
-				return config.ContextNotFound(l.ctxName)
+			if !cfg.HasContext(ctxName) {
+				return config.ContextNotFound(ctxName)
 			}
-			cfg.CurrentContext = l.ctxName
+			cfg.CurrentContext = ctxName
 			return nil
 		})
 	}

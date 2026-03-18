@@ -10,7 +10,7 @@ comply with good practices and environment-specific policies.
 Resources can be linted using:
 
 ```shell
-grafanactl linter lint ./resources
+grafanactl dev lint run ./resources
 ```
 
 Directories are recursively explored and all [built-in rules](../reference/linter-rules/index.md)
@@ -20,22 +20,22 @@ For a finer control, the rules used to lint resources can be configured:
 
 ```shell
 # Disable all rules for a resource type:
-grafanactl linter lint --disable-resource dashboard ./resources
+grafanactl dev lint run --disable-resource dashboard ./resources
 
 # Disable all rules in a category:
-grafanactl linter lint --disable-category idiomatic ./resources
+grafanactl dev lint run --disable-category idiomatic ./resources
 
 # Disable specific rules:
-grafanactl linter lint --disable uneditable-dashboard --disable panel-title-description ./resources
+grafanactl dev lint run --disable uneditable-dashboard --disable panel-title-description ./resources
 
 # Enable rules for specific resource types:
-grafanactl linter lint --disable-all --enable-resource dashboard ./resources
+grafanactl dev lint run --disable-all --enable-resource dashboard ./resources
 
 # Enable only some categories:
-grafanactl linter lint --disable-all --enable-category idiomatic ./resources
+grafanactl dev lint run --disable-all --enable-category idiomatic ./resources
 
 # Enable only specific rules:
-grafanactl linter lint --disable-all --enable uneditable-dashboard ./resources
+grafanactl dev lint run --disable-all --enable uneditable-dashboard ./resources
 ```
 
 ## Define custom linting rules
@@ -50,7 +50,7 @@ New custom rules can be scaffolded with `grafanactl`:
 
 ```shell
 # Creates a new "dashboard" linter rule in the current directory:
-grafanactl linter new dashboard custom-rule
+grafanactl dev lint new dashboard custom-rule
 ```
 
 As a result, a file with the bootstrapped rule is generated:
@@ -95,5 +95,5 @@ categories than the `idiomatic` one:
 
 ```shell
 # Creates a new "alertrule" linter rule, categorized under "bug":
-grafanactl linter new alertrule custom-rule -c bug
+grafanactl dev lint new alertrule custom-rule -c bug
 ```

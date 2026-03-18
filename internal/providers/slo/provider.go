@@ -32,7 +32,9 @@ func (p *SLOProvider) Commands() []*cobra.Command {
 			if root := cmd.Root(); root.PersistentPreRun != nil {
 				root.PersistentPreRun(cmd, args)
 			}
-			providers.WarnDeprecated(cmd, "grafanactl resources list slo")
+			if providers.IsCRUDCommand(cmd) {
+				providers.WarnDeprecated(cmd, "grafanactl resources schemas slo")
+			}
 		},
 	}
 

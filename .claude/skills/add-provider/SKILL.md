@@ -382,7 +382,7 @@ import (
 This triggers `init()` → `providers.Register()` → `providers.All()` returns it.
 
 **Also register a ResourceAdapter** so the provider's resource types appear in
-`grafanactl resources list/get/push/pull/delete`. In the provider's `init()`,
+`grafanactl resources get/push/pull/delete`. In the provider's `init()`,
 call `adapter.Register()` for each resource type:
 
 ```go
@@ -415,7 +415,7 @@ func init() {
 
 This makes the provider's resource types accessible through:
 ```
-grafanactl resources list {short-alias}
+grafanactl resources get {short-alias}
 grafanactl resources get {short-alias}/<id>
 grafanactl resources push {short-alias}
 grafanactl resources pull {short-alias}

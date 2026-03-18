@@ -4,10 +4,48 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/grafana/grafanactl/internal/resources"
 )
+
+// slugifyJob converts a check Job string to a K8s-safe name (RFC 1123 subdomain).
+// Spaces and unsupported chars are replaced with hyphens; result is lowercased.
+var nonAlphanumHyphen = regexp.MustCompile(`[^a-z0-9-]+`)
+var multiHyphen = regexp.MustCompile(`-+`)
+
+func slugifyJob(job string) string {
+	s := strings.ToLower(job)
+	s = nonAlphanumHyphen.ReplaceAllString(s, "-")
+	s = multiHyphen.ReplaceAllString(s, "-")
+	s = strings.Trim(s, "-")
+	if s == "" {
+		return "check"
+	}
+	return s
+}
+
+// extractIDFromSlug recovers the numeric check ID from a resource name.
+// It handles two formats:
+//   - "slug-<id>" (e.g. "web-check-8127") — current format, appended by ToResource
+//   - "<id>"      (e.g. "8127")           — legacy format from pre-slug versions
+//
+// Returns (id, true) on success, (0, false) if no numeric ID can be found.
+func extractIDFromSlug(name string) (int64, bool) {
+	// Legacy: pure numeric name.
+	if id, err := strconv.ParseInt(name, 10, 64); err == nil {
+		return id, true
+	}
+	// Current: "slug-<id>" — extract numeric suffix after the last hyphen.
+	if idx := strings.LastIndex(name, "-"); idx >= 0 {
+		if id, err := strconv.ParseInt(name[idx+1:], 10, 64); err == nil {
+			return id, true
+		}
+	}
+	return 0, false
+}
 
 // ToResource converts an API Check + probe map to a K8s-envelope Resource.
 // probeNames maps probe ID → name for display in the YAML file.
@@ -48,14 +86,29 @@ func ToResource(check Check, namespace string, probeNames map[int64]string) (*re
 		return nil, fmt.Errorf("unmarshalling check spec to map: %w", err)
 	}
 
+	// Embed the numeric check ID as a suffix in the name (e.g. "web-check-8127").
+	// This guarantees uniqueness even when two checks share the same Job string
+	// (e.g. same job targeting different URLs). The suffix also lets FromResource,
+	// Get, and Delete recover the numeric API ID from the name alone.
+	name := slugifyJob(check.Job)
+	if check.ID != 0 {
+		name = name + "-" + strconv.FormatInt(check.ID, 10)
+	}
+	metadata := map[string]any{
+		"name":      name,
+		"namespace": namespace,
+	}
+	// Also store in metadata.uid as a secondary source for files written by
+	// older versions that used uid for ID recovery.
+	if check.ID != 0 {
+		metadata["uid"] = strconv.FormatInt(check.ID, 10)
+	}
+
 	obj := map[string]any{
 		"apiVersion": APIVersion,
 		"kind":       Kind,
-		"metadata": map[string]any{
-			"name":      strconv.FormatInt(check.ID, 10),
-			"namespace": namespace,
-		},
-		"spec": specMap,
+		"metadata":   metadata,
+		"spec":       specMap,
 	}
 
 	return resources.MustFromObject(obj, resources.SourceInfo{}), nil
@@ -87,12 +140,21 @@ func FromResource(res *resources.Resource) (*CheckSpec, int64, error) {
 		return nil, 0, fmt.Errorf("unmarshalling spec to CheckSpec: %w", err)
 	}
 
-	// Parse the numeric ID from metadata.name (0 means "create new").
+	// Recover the numeric check ID. Priority order:
+	//  1. metadata.uid  — set by older ToResource versions
+	//  2. metadata.name — current "slug-<id>" format, or legacy pure-numeric name
+	// 0 means "create new check".
 	var id int64
-	name := res.Raw.GetName()
-	if name != "" {
-		if parsed, err := strconv.ParseInt(name, 10, 64); err == nil {
+	if uid := res.Raw.GetUID(); uid != "" {
+		if parsed, err := strconv.ParseInt(string(uid), 10, 64); err == nil {
 			id = parsed
+		}
+	}
+	if id == 0 {
+		if name := res.Raw.GetName(); name != "" {
+			if parsed, ok := extractIDFromSlug(name); ok {
+				id = parsed
+			}
 		}
 	}
 

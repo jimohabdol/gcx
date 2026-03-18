@@ -1,17 +1,34 @@
-## grafanactl slo reports list
+## grafanactl resources schemas
 
-List SLO reports.
+List available Grafana API resource types
+
+### Synopsis
+
+List available Grafana API resource types and their schemas.
 
 ```
-grafanactl slo reports list [flags]
+grafanactl resources schemas [flags]
+```
+
+### Examples
+
+```
+
+	grafanactl resources schemas
+	grafanactl resources schemas -o wide
+	grafanactl resources schemas -o json
+	grafanactl resources schemas -o yaml
+	grafanactl resources schemas -o json --no-schema
+
 ```
 
 ### Options
 
 ```
-  -h, --help            help for list
+  -h, --help            help for schemas
       --json string     Comma-separated list of fields to include in JSON output, or '?' to discover available fields
-  -o, --output string   Output format. One of: json, table, wide, yaml (default "table")
+      --no-schema       Skip fetching OpenAPI spec schemas (faster, omits schema info and unlistable resource types)
+  -o, --output string   Output format. One of: json, table, text, wide, yaml (default "text")
 ```
 
 ### Options inherited from parent commands
@@ -27,5 +44,5 @@ grafanactl slo reports list [flags]
 
 ### SEE ALSO
 
-* [grafanactl slo reports](grafanactl_slo_reports.md)	 - Manage SLO reports.
+* [grafanactl resources](grafanactl_resources.md)	 - Manipulate Grafana resources
 

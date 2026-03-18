@@ -1,29 +1,35 @@
-## grafanactl resources list
+## grafanactl dev lint new
 
-List available Grafana API resources
+Creates a new linter rule
 
 ### Synopsis
 
-List available Grafana API resources.
+Creates a new linter rule.
 
 ```
-grafanactl resources list [flags]
+grafanactl dev lint new RESOURCE_TYPE NAME [flags]
 ```
 
 ### Examples
 
 ```
 
-	grafanactl resources list
+	# Creates a new dashboard linter rule in the current directory:
+
+	grafanactl dev lint new dashboard test-linter
+
+	# Creates a new dashboard linter rule in another directory:
+
+	grafanactl dev lint new dashboard test-linter -o custom-rules
 
 ```
 
 ### Options
 
 ```
-  -h, --help            help for list
-      --json string     Comma-separated list of fields to include in JSON output, or '?' to discover available fields
-  -o, --output string   Output format. One of: json, text, wide, yaml (default "text")
+  -c, --category string   Rule category (default "idiomatic")
+  -h, --help              help for new
+  -o, --output string     Output directory
 ```
 
 ### Options inherited from parent commands
@@ -39,5 +45,5 @@ grafanactl resources list [flags]
 
 ### SEE ALSO
 
-* [grafanactl resources](grafanactl_resources.md)	 - Manipulate Grafana resources
+* [grafanactl dev lint](grafanactl_dev_lint.md)	 - Lint Grafana resources
 

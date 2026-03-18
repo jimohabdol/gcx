@@ -5,7 +5,7 @@ title: Dashboards as code
 With this workflow, you can define and manage dashboards as code, saving them to a version control system like Git. This is useful for teams that want to maintain a history of changes, collaborate on dashboard design, and ensure consistency across environments.
 
 !!! note
-    In order to use `grafanactl resources serve` functionality, you will have to enable a feature toggle in your `config.ini`:
+    In order to use `grafanactl dev serve` functionality, you will have to enable a feature toggle in your `config.ini`:
       ```ini
       [feature_toggles]
       kubernetesDashboards = true
@@ -16,7 +16,7 @@ With this workflow, you can define and manage dashboards as code, saving them to
 1. Serve and preview the output of the dashboard generator locally:
    ```shell
    grafanactl config use-context YOUR_CONTEXT  # for example "dev"
-   grafanactl resources serve --script 'go run scripts/generate-dashboard.go' --watch './scripts'
+   grafanactl dev serve --script 'go run scripts/generate-dashboard.go' --watch './scripts'
    ```
 1. When the output looks correct, generate dashboard manifest files:
    ```shell

@@ -90,23 +90,23 @@ make docs        # Generate + build all documentation
 cmd/grafanactl/
 ├── root/        CLI root (logging, global flags)
 ├── config/      Config management commands (set, use-context, view...)
-├── resources/   Resource commands (get, list, push, pull, serve...)
+├── resources/   Resource commands (get, schemas, push, pull, delete, edit, validate)
 ├── dashboards/  Dashboard commands (snapshot via Image Renderer)
 ├── datasources/ Datasource commands (list, get, prometheus, loki)
 ├── query/       Query execution command (PromQL/LogQL with graph output)
 ├── providers/   Provider list command
 ├── api/         Raw API passthrough command (direct Grafana API calls)
-├── linter/      Linting commands (lint, new, rules, test subcommands)
-├── dev/         Developer commands (import, scaffold, generate subcommands)
+├── linter/      Linting commands (run, new, rules, test — mounted under dev lint)
+├── dev/         Developer commands (import, scaffold, generate, lint, serve)
 ├── fail/        Structured error → user-friendly message conversion
 └── io/          Output codec registry (json, yaml, text, wide)
 
 internal/
-├── config/      Config types, loader, editor, rest.Config builder, stack-id discovery
+├── config/      Config types, loader, editor, rest.Config builder, stack-id discovery, context name helpers
 ├── resources/
 │   ├── *.go     Core types: Resource, Selector, Filter, Descriptor, Resources collection
 │   ├── adapter/    ResourceAdapter interface, Factory, ResourceClientRouter, self-registration
-│   ├── discovery/  API resource discovery, registry index, GVK resolution
+│   ├── discovery/  API resource discovery, registry index, GVK resolution, OpenAPI schema fetcher
 │   ├── dynamic/    k8s dynamic client wrapper (namespaced + versioned)
 │   ├── local/      FSReader, FSWriter (disk I/O)
 │   ├── process/    Processors: ManagerFields, ServerFields, Namespace
