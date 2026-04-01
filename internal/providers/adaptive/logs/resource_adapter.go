@@ -54,34 +54,47 @@ func ExemptionExample() json.RawMessage {
 	return b
 }
 
+func newAdaptiveLogsClient(ctx context.Context, loader *providers.ConfigLoader) (*Client, error) {
+	signalAuth, err := adaptiveauth.ResolveSignalAuth(ctx, loader, "logs")
+	if err != nil {
+		return nil, err
+	}
+	return NewClient(signalAuth.BaseURL, signalAuth.TenantID, signalAuth.APIToken, signalAuth.HTTPClient), nil
+}
+
+func buildLogsTypedCRUD[T adapter.ResourceNamer](
+	desc resources.Descriptor,
+	list func(context.Context) ([]T, error),
+	get func(context.Context, string) (*T, error),
+	create func(context.Context, *T) (*T, error),
+	update func(context.Context, string, *T) (*T, error),
+	del func(context.Context, string) error,
+) *adapter.TypedCRUD[T] {
+	return &adapter.TypedCRUD[T]{
+		ListFn:      list,
+		GetFn:       get,
+		CreateFn:    create,
+		UpdateFn:    update,
+		DeleteFn:    del,
+		Namespace:   "default",
+		StripFields: []string{"id"},
+		Descriptor:  desc,
+	}
+}
+
 // NewExemptionTypedCRUD creates a TypedCRUD for adaptive log exemptions.
 func NewExemptionTypedCRUD(ctx context.Context, loader *providers.ConfigLoader) (*adapter.TypedCRUD[Exemption], string, error) {
-	signalAuth, err := adaptiveauth.ResolveSignalAuth(ctx, loader, "logs")
+	client, err := newAdaptiveLogsClient(ctx, loader)
 	if err != nil {
 		return nil, "", err
 	}
-	client := NewClient(signalAuth.BaseURL, signalAuth.TenantID, signalAuth.APIToken, signalAuth.HTTPClient)
-
-	crud := &adapter.TypedCRUD[Exemption]{
-		ListFn: func(ctx context.Context) ([]Exemption, error) {
-			return client.ListExemptions(ctx)
-		},
-		GetFn: func(ctx context.Context, name string) (*Exemption, error) {
-			return client.GetExemption(ctx, name)
-		},
-		CreateFn: func(ctx context.Context, e *Exemption) (*Exemption, error) {
-			return client.CreateExemption(ctx, e)
-		},
-		UpdateFn: func(ctx context.Context, name string, e *Exemption) (*Exemption, error) {
-			return client.UpdateExemption(ctx, name, e)
-		},
-		DeleteFn: func(ctx context.Context, name string) error {
-			return client.DeleteExemption(ctx, name)
-		},
-		Namespace:   "default",
-		StripFields: []string{"id"},
-		Descriptor:  exemptionDescriptorVar,
-	}
+	crud := buildLogsTypedCRUD(exemptionDescriptorVar,
+		client.ListExemptions,
+		client.GetExemption,
+		client.CreateExemption,
+		client.UpdateExemption,
+		client.DeleteExemption,
+	)
 	return crud, "default", nil
 }
 
@@ -89,6 +102,80 @@ func NewExemptionTypedCRUD(ctx context.Context, loader *providers.ConfigLoader) 
 func NewExemptionAdapterFactory(loader *providers.ConfigLoader) adapter.Factory {
 	return func(ctx context.Context) (adapter.ResourceAdapter, error) {
 		crud, _, err := NewExemptionTypedCRUD(ctx, loader)
+		if err != nil {
+			return nil, err
+		}
+		return crud.AsAdapter(), nil
+	}
+}
+
+// ---------------------------------------------------------------------------
+// LogSegment resource adapter
+// ---------------------------------------------------------------------------
+
+const (
+	SegmentAPIVersion = "adaptive-logs.ext.grafana.app/v1alpha1"
+	SegmentKind       = "Segment"
+)
+
+//nolint:gochecknoglobals // Static descriptor used in registration pattern.
+var segmentDescriptorVar = resources.Descriptor{
+	GroupVersion: schema.GroupVersion{
+		Group:   "adaptive-logs.ext.grafana.app",
+		Version: "v1alpha1",
+	},
+	Kind:     SegmentKind,
+	Singular: "segment",
+	Plural:   "segments",
+}
+
+// SegmentDescriptor returns the resource descriptor for adaptive log segments.
+func SegmentDescriptor() resources.Descriptor { return segmentDescriptorVar }
+
+// SegmentSchema returns a JSON Schema for the LogSegment resource type.
+func SegmentSchema() json.RawMessage {
+	return adapter.SchemaFromType[LogSegment](SegmentDescriptor())
+}
+
+// SegmentExample returns an example LogSegment manifest as JSON.
+func SegmentExample() json.RawMessage {
+	example := map[string]any{
+		"apiVersion": SegmentAPIVersion,
+		"kind":       SegmentKind,
+		"metadata":   map[string]any{"name": "my-segment"},
+		"spec": map[string]any{
+			"name":                "production-logs",
+			"selector":            `{env="production"}`,
+			"fallback_to_default": false,
+		},
+	}
+	b, err := json.Marshal(example)
+	if err != nil {
+		panic(fmt.Sprintf("adaptive/logs: failed to marshal segment example: %v", err))
+	}
+	return b
+}
+
+// NewSegmentTypedCRUD creates a TypedCRUD for adaptive log segments.
+func NewSegmentTypedCRUD(ctx context.Context, loader *providers.ConfigLoader) (*adapter.TypedCRUD[LogSegment], string, error) {
+	client, err := newAdaptiveLogsClient(ctx, loader)
+	if err != nil {
+		return nil, "", err
+	}
+	crud := buildLogsTypedCRUD(segmentDescriptorVar,
+		client.ListSegments,
+		client.GetSegment,
+		client.CreateSegment,
+		client.UpdateSegment,
+		client.DeleteSegment,
+	)
+	return crud, "default", nil
+}
+
+// NewSegmentAdapterFactory returns an adapter.Factory for adaptive log segments.
+func NewSegmentAdapterFactory(loader *providers.ConfigLoader) adapter.Factory {
+	return func(ctx context.Context) (adapter.ResourceAdapter, error) {
+		crud, _, err := NewSegmentTypedCRUD(ctx, loader)
 		if err != nil {
 			return nil, err
 		}

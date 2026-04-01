@@ -1,11 +1,36 @@
 package logs
 
 import (
+	"math"
 	"sort"
 	"strings"
 
 	"github.com/grafana/gcx/internal/resources/adapter"
 )
+
+// queryIngestLabel maps the queried-to-ingested line ratio to a short label, matching
+// grafana-adaptivelogs-app getQueryIngestRange (QueryIngestRatio/ranges.ts).
+func queryIngestLabel(queried, ingested uint64) string {
+	if ingested == 0 {
+		return "N/A"
+	}
+	ratio := float64(queried) / float64(ingested)
+	if math.IsNaN(ratio) || math.IsInf(ratio, 0) {
+		return "N/A"
+	}
+	switch {
+	case ratio <= 0:
+		return "Never"
+	case ratio <= 0.01:
+		return "Rarely"
+	case ratio <= 0.4:
+		return "Sometimes"
+	case ratio < 1:
+		return "Often"
+	default:
+		return "Always"
+	}
+}
 
 // Segment represents per-dimension volume and drop-rate data within a recommendation.
 type Segment struct {
@@ -53,7 +78,7 @@ func (r *LogRecommendation) Label() string {
 //nolint:recvcheck // Mixed receivers are intentional for Go generics TypedCRUD compatibility.
 type Exemption struct {
 	ID             string `json:"id,omitempty"`
-	StreamSelector string `json:"stream_selector"`
+	StreamSelector string `json:"stream_selector,omitempty"`
 	Reason         string `json:"reason,omitempty"`
 	CreatedAt      string `json:"created_at,omitempty"`
 	CreatedBy      string `json:"created_by,omitempty"`
@@ -71,3 +96,26 @@ func (e *Exemption) SetResourceName(name string) { e.ID = name }
 
 // Compile-time assertion: Exemption implements adapter.ResourceIdentity.
 var _ adapter.ResourceIdentity = &Exemption{}
+
+// LogSegment represents an adaptive logs segment configuration.
+// Named LogSegment to avoid collision with the Segment type (per-dimension stats within a recommendation).
+//
+//nolint:recvcheck // Mixed receivers are intentional for Go generics TypedCRUD compatibility.
+type LogSegment struct {
+	ID                string `json:"id,omitempty"`
+	Selector          string `json:"selector,omitempty"`
+	Name              string `json:"name"`
+	FallbackToDefault bool   `json:"fallback_to_default"`
+	CreatedAt         string `json:"created_at,omitempty"`
+	UpdatedAt         string `json:"updated_at,omitempty"`
+	IsEarly           bool   `json:"is_early,omitempty"`
+}
+
+// GetResourceName implements adapter.ResourceNamer for TypedCRUD compatibility.
+func (s LogSegment) GetResourceName() string { return s.ID }
+
+// SetResourceName implements adapter.ResourceIdentity for TypedCRUD compatibility.
+func (s *LogSegment) SetResourceName(name string) { s.ID = name }
+
+// Compile-time assertion: LogSegment implements adapter.ResourceIdentity.
+var _ adapter.ResourceIdentity = &LogSegment{}
