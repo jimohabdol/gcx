@@ -96,6 +96,17 @@ make all         # lint + tests + build + docs
 make docs        # Generate + build all documentation
 ```
 
+> **Before running quality gates, rebase onto the latest upstream main.**
+> This catches conflicts early and ensures `make all` (especially `make docs`)
+> runs against the current command tree. If working on a worktree or ephemeral
+> branch with uncommitted changes, stash first:
+> ```
+> git stash --include-untracked
+> git fetch origin main && git rebase origin/main
+> git stash pop
+> ```
+> Resolve any conflicts before proceeding. If in doubt about the base branch, ask.
+
 > **Before pushing to a PR branch, always run `make all` with agent mode explicitly disabled.**
 > The `make docs` step regenerates `docs/reference/cli/` by running the binary, which
 > auto-detects agent mode from env vars like `CLAUDECODE` or `CLAUDE_CODE`. When those
@@ -126,7 +137,7 @@ cmd/gcx/
 ├── dashboards/  Dashboard commands (snapshot via Image Renderer)
 ├── datasources/ Datasource commands (list, get, query)
 │   └── query/   Auto-detecting query command (GenericCmd only; shared infra in internal/datasources/query/)
-├── providers/   Provider list command
+├── providers/   Provider commands (list)
 ├── api/         Raw API passthrough command (direct Grafana API calls)
 ├── linter/      Linting commands (run, new, rules, test — mounted under dev lint)
 ├── commands/    Commands catalog (agent-consumable metadata, resource types, live validation)
@@ -179,7 +190,7 @@ internal/
 ├── testutils/   Shared test utilities
 ├── server/      Live dev server (Chi router, reverse proxy, websocket reload)
 ├── grafana/     OpenAPI client (health checks, version detection)
-├── output/      Output codec registry (json, yaml, text, wide — field selection, formatting)
+├── output/      Output codec registry (json, yaml, text, wide — field selection, discovery, k8s unstructured handling)
 ├── format/      JSON/YAML codecs with format auto-detection
 ├── httputils/   HTTP helpers (used by serve command's proxy)
 ├── secrets/     Redactor for config view

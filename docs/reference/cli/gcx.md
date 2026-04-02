@@ -9,11 +9,12 @@ gcx is a unified CLI for managing Grafana resources, dashboards, datasources, al
 ### Options
 
 ```
-      --agent           Enable agent mode (JSON output, no color). Auto-detected from CLAUDECODE, CLAUDE_CODE, CURSOR_AGENT, GITHUB_COPILOT, AMAZON_Q, or GCX_AGENT_MODE env vars.
-  -h, --help            help for gcx
-      --no-color        Disable color output
-      --no-truncate     Disable table column truncation (auto-enabled when stdout is piped)
-  -v, --verbose count   Verbose mode. Multiple -v options increase the verbosity (maximum: 3).
+      --agent            Enable agent mode (JSON output, no color). Auto-detected from CLAUDECODE, CLAUDE_CODE, CURSOR_AGENT, GITHUB_COPILOT, AMAZON_Q, or GCX_AGENT_MODE env vars.
+      --context string   Name of the context to use (overrides current-context in config)
+  -h, --help             help for gcx
+      --no-color         Disable color output
+      --no-truncate      Disable table column truncation (auto-enabled when stdout is piped)
+  -v, --verbose count    Verbose mode. Multiple -v options increase the verbosity (maximum: 3).
 ```
 
 ### SEE ALSO
@@ -36,7 +37,7 @@ gcx is a unified CLI for managing Grafana resources, dashboards, datasources, al
 * [gcx metrics](gcx_metrics.md)	 - Query Prometheus datasources and manage Adaptive Metrics
 * [gcx oncall](gcx_oncall.md)	 - Manage Grafana OnCall integrations, escalation chains, schedules, and routing
 * [gcx profiles](gcx_profiles.md)	 - Query Pyroscope datasources and manage continuous profiling
-* [gcx providers](gcx_providers.md)	 - List registered providers
+* [gcx providers](gcx_providers.md)	 - Manage registered providers
 * [gcx resources](gcx_resources.md)	 - Manipulate Grafana resources
 * [gcx setup](gcx_setup.md)	 - Onboard and configure Grafana Cloud products.
 * [gcx slo](gcx_slo.md)	 - Manage Grafana SLO definitions and reports
