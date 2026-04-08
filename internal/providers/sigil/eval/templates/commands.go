@@ -1,4 +1,4 @@
-package agents
+package templates
 
 import (
 	"errors"
@@ -9,6 +9,7 @@ import (
 	"github.com/grafana/gcx/internal/format"
 	cmdio "github.com/grafana/gcx/internal/output"
 	"github.com/grafana/gcx/internal/providers"
+	"github.com/grafana/gcx/internal/providers/sigil/eval"
 	"github.com/grafana/gcx/internal/providers/sigil/sigilhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -22,13 +23,12 @@ func newClient(cmd *cobra.Command, loader *providers.ConfigLoader) (*Client, err
 	return NewClient(base), nil
 }
 
-// Commands returns the agents command group.
+// Commands returns the templates command group.
 func Commands(loader *providers.ConfigLoader) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "agents",
-		Short: "Query Sigil agent catalog.",
+		Use:   "templates",
+		Short: "Browse reusable evaluator blueprints (global and tenant-scoped).",
 	}
-
 	cmd.AddCommand(
 		newListCommand(loader),
 		newGetCommand(loader),
@@ -41,22 +41,27 @@ func Commands(loader *providers.ConfigLoader) *cobra.Command {
 
 type listOpts struct {
 	IO    cmdio.Options
-	Limit int
+	Scope string
 }
 
 func (o *listOpts) setup(flags *pflag.FlagSet) {
-	o.IO.RegisterCustomCodec("table", &ListTableCodec{})
-	o.IO.RegisterCustomCodec("wide", &ListTableCodec{Wide: true})
+	o.IO.RegisterCustomCodec("table", &TableCodec{})
+	o.IO.RegisterCustomCodec("wide", &TableCodec{Wide: true})
 	o.IO.DefaultFormat("table")
 	o.IO.BindFlags(flags)
-	flags.IntVar(&o.Limit, "limit", 100, "Maximum number of agents to return")
+	flags.StringVar(&o.Scope, "scope", "", `Filter by scope: "global" or "tenant"`)
 }
 
 func newListCommand(loader *providers.ConfigLoader) *cobra.Command {
 	opts := &listOpts{}
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List agents.",
+		Short: "List eval templates.",
+		Example: `  # List all templates.
+  gcx sigil templates list
+
+  # Filter by scope.
+  gcx sigil templates list --scope global`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.IO.Validate(); err != nil {
 				return err
@@ -65,11 +70,11 @@ func newListCommand(loader *providers.ConfigLoader) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			agents, err := client.List(cmd.Context(), opts.Limit)
+			templates, err := client.List(cmd.Context(), opts.Scope)
 			if err != nil {
 				return err
 			}
-			return opts.IO.Encode(cmd.OutOrStdout(), agents)
+			return opts.IO.Encode(cmd.OutOrStdout(), templates)
 		},
 	}
 	opts.setup(cmd.Flags())
@@ -79,23 +84,27 @@ func newListCommand(loader *providers.ConfigLoader) *cobra.Command {
 // --- get ---
 
 type getOpts struct {
-	IO      cmdio.Options
-	Version string
+	IO cmdio.Options
 }
 
 func (o *getOpts) setup(flags *pflag.FlagSet) {
 	o.IO.DefaultFormat("yaml")
 	o.IO.BindFlags(flags)
-	flags.StringVar(&o.Version, "version", "", "Specific effective version to look up")
 }
 
 func newGetCommand(loader *providers.ConfigLoader) *cobra.Command {
 	opts := &getOpts{}
 	cmd := &cobra.Command{
-		Use:   "get <agent-name>",
-		Short: "Get a single agent definition.",
-		Long:  `Get the full agent definition. Use --version for a specific version.`,
-		Args:  cobra.ExactArgs(1),
+		Use:   "get <template-id>",
+		Short: "Get a single eval template.",
+		Long: `Get the full template definition including config and output keys.
+
+Templates are reusable evaluator blueprints. Export a template as YAML,
+customize it, and create an evaluator with 'evaluators create -f'.`,
+		Example: `  # Get a template's config and output keys.
+  gcx sigil templates get my-template -o yaml > evaluator.yaml
+  gcx sigil evaluators create -f evaluator.yaml`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.IO.Validate(); err != nil {
 				return err
@@ -104,7 +113,7 @@ func newGetCommand(loader *providers.ConfigLoader) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			detail, err := client.Lookup(cmd.Context(), args[0], opts.Version)
+			detail, err := client.Get(cmd.Context(), args[0])
 			if err != nil {
 				return err
 			}
@@ -130,8 +139,8 @@ func (o *versionsOpts) setup(flags *pflag.FlagSet) {
 func newVersionsCommand(loader *providers.ConfigLoader) *cobra.Command {
 	opts := &versionsOpts{}
 	cmd := &cobra.Command{
-		Use:   "versions <agent-name>",
-		Short: "List version history for an agent.",
+		Use:   "versions <template-id>",
+		Short: "List version history for an eval template.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.IO.Validate(); err != nil {
@@ -141,7 +150,7 @@ func newVersionsCommand(loader *providers.ConfigLoader) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			versions, err := client.Versions(cmd.Context(), args[0])
+			versions, err := client.ListVersions(cmd.Context(), args[0])
 			if err != nil {
 				return err
 			}
@@ -152,69 +161,81 @@ func newVersionsCommand(loader *providers.ConfigLoader) *cobra.Command {
 	return cmd
 }
 
-// --- list table codec ---
+// --- table codecs ---
 
-type ListTableCodec struct {
+// TableCodec renders template list as a text table.
+type TableCodec struct {
 	Wide bool
 }
 
-func (c *ListTableCodec) Format() format.Format {
+func (c *TableCodec) Format() format.Format {
 	if c.Wide {
 		return "wide"
 	}
 	return "table"
 }
 
-func (c *ListTableCodec) Encode(w io.Writer, v any) error {
-	agents, ok := v.([]Agent)
+func (c *TableCodec) Encode(w io.Writer, v any) error {
+	templates, ok := v.([]eval.TemplateDefinition)
 	if !ok {
-		return errors.New("invalid data type for table codec: expected []Agent")
+		return errors.New("invalid data type for table codec: expected []TemplateDefinition")
 	}
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
 	if c.Wide {
-		fmt.Fprintln(tw, "NAME\tVERSIONS\tGENERATIONS\tTOOLS\tTOKENS\tFIRST SEEN\tLAST SEEN")
+		fmt.Fprintln(tw, "ID\tSCOPE\tKIND\tLATEST VERSION\tDESCRIPTION\tCREATED BY\tCREATED AT")
 	} else {
-		fmt.Fprintln(tw, "NAME\tVERSIONS\tGENERATIONS\tTOOLS\tLAST SEEN")
+		fmt.Fprintln(tw, "ID\tSCOPE\tKIND\tLATEST VERSION\tDESCRIPTION")
 	}
 
-	for _, a := range agents {
-		lastSeen := sigilhttp.FormatTime(a.LatestSeenAt)
+	for _, t := range templates {
+		desc := sigilhttp.Truncate(t.Description, 40)
+		version := t.LatestVersion
+		if version == "" {
+			version = "-"
+		}
+
 		if c.Wide {
-			firstSeen := sigilhttp.FormatTime(a.FirstSeenAt)
-			fmt.Fprintf(tw, "%s\t%d\t%d\t%d\t%d\t%s\t%s\n",
-				a.AgentName, a.VersionCount, a.GenerationCount, a.ToolCount, a.TokenEstimate.Total, firstSeen, lastSeen)
+			createdBy := t.CreatedBy
+			if createdBy == "" {
+				createdBy = "-"
+			}
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+				t.TemplateID, t.Scope, t.Kind, version, desc, createdBy, sigilhttp.FormatTime(t.CreatedAt))
 		} else {
-			fmt.Fprintf(tw, "%s\t%d\t%d\t%d\t%s\n",
-				a.AgentName, a.VersionCount, a.GenerationCount, a.ToolCount, lastSeen)
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
+				t.TemplateID, t.Scope, t.Kind, version, desc)
 		}
 	}
 	return tw.Flush()
 }
 
-func (c *ListTableCodec) Decode(_ io.Reader, _ any) error {
+func (c *TableCodec) Decode(_ io.Reader, _ any) error {
 	return errors.New("table format does not support decoding")
 }
 
-// --- versions table codec ---
-
+// VersionsTableCodec renders template versions as a text table.
 type VersionsTableCodec struct{}
 
 func (c *VersionsTableCodec) Format() format.Format { return "table" }
 
 func (c *VersionsTableCodec) Encode(w io.Writer, v any) error {
-	versions, ok := v.([]AgentVersion)
+	versions, ok := v.([]eval.TemplateVersion)
 	if !ok {
-		return errors.New("invalid data type for table codec: expected []AgentVersion")
+		return errors.New("invalid data type for table codec: expected []TemplateVersion")
 	}
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(tw, "VERSION\tGENERATIONS\tTOOLS\tTOKENS\tFIRST SEEN\tLAST SEEN")
+	fmt.Fprintln(tw, "VERSION\tCHANGELOG\tCREATED BY\tCREATED AT")
 
 	for _, ver := range versions {
-		fmt.Fprintf(tw, "%s\t%d\t%d\t%d\t%s\t%s\n",
-			ver.EffectiveVersion, ver.GenerationCount, ver.ToolCount, ver.TokenEstimate.Total,
-			sigilhttp.FormatTime(ver.FirstSeenAt), sigilhttp.FormatTime(ver.LastSeenAt))
+		changelog := sigilhttp.Truncate(ver.Changelog, 50)
+		createdBy := ver.CreatedBy
+		if createdBy == "" {
+			createdBy = "-"
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
+			ver.Version, changelog, createdBy, sigilhttp.FormatTime(ver.CreatedAt))
 	}
 	return tw.Flush()
 }

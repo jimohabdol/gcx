@@ -1,23 +1,17 @@
-## gcx sigil conversations show
+## gcx sigil rules get
 
-Show conversations or a single conversation detail.
-
-### Synopsis
-
-Show conversations. Without an ID, lists conversations (use --limit to control count).
-With an ID, shows the full conversation detail including all generations.
+Get a single evaluation rule.
 
 ```
-gcx sigil conversations show [conversation-id] [flags]
+gcx sigil rules get <rule-id> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help            help for show
+  -h, --help            help for get
       --json string     Comma-separated list of fields to include in JSON output, or 'list' (or '?') to discover available fields
-      --limit int       Maximum number of conversations to return (0 for no limit) (default 100)
-  -o, --output string   Output format. One of: json, table, wide, yaml (default "table")
+  -o, --output string   Output format. One of: json, yaml (default "yaml")
 ```
 
 ### Options inherited from parent commands
@@ -33,5 +27,5 @@ gcx sigil conversations show [conversation-id] [flags]
 
 ### SEE ALSO
 
-* [gcx sigil conversations](gcx_sigil_conversations.md)	 - Query Sigil conversations.
+* [gcx sigil rules](gcx_sigil_rules.md)	 - Manage rules that route generations to evaluators.
 

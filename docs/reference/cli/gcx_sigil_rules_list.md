@@ -1,20 +1,15 @@
-## gcx sigil rules show
+## gcx sigil rules list
 
-Show evaluation rules or a single rule detail.
-
-### Synopsis
-
-Show evaluation rules. Without an ID, lists all rules.
-With an ID, shows the full rule definition.
+List evaluation rules.
 
 ```
-gcx sigil rules show [rule-id] [flags]
+gcx sigil rules list [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help            help for show
+  -h, --help            help for list
       --json string     Comma-separated list of fields to include in JSON output, or 'list' (or '?') to discover available fields
   -o, --output string   Output format. One of: json, table, wide, yaml (default "table")
 ```
@@ -32,5 +27,5 @@ gcx sigil rules show [rule-id] [flags]
 
 ### SEE ALSO
 
-* [gcx sigil rules](gcx_sigil_rules.md)	 - Query Sigil evaluation rules.
+* [gcx sigil rules](gcx_sigil_rules.md)	 - Manage rules that route generations to evaluators.
 

@@ -1,21 +1,17 @@
-## gcx sigil evaluators show
+## gcx sigil conversations list
 
-Show evaluators or a single evaluator detail.
-
-### Synopsis
-
-Show evaluators. Without an ID, lists all evaluators.
-With an ID, shows the full evaluator definition.
+List conversations.
 
 ```
-gcx sigil evaluators show [evaluator-id] [flags]
+gcx sigil conversations list [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help            help for show
+  -h, --help            help for list
       --json string     Comma-separated list of fields to include in JSON output, or 'list' (or '?') to discover available fields
+      --limit int       Maximum number of conversations to return (0 for no limit) (default 100)
   -o, --output string   Output format. One of: json, table, wide, yaml (default "table")
 ```
 
@@ -32,5 +28,5 @@ gcx sigil evaluators show [evaluator-id] [flags]
 
 ### SEE ALSO
 
-* [gcx sigil evaluators](gcx_sigil_evaluators.md)	 - Query Sigil evaluators.
+* [gcx sigil conversations](gcx_sigil_conversations.md)	 - Query Sigil conversations.
 

@@ -1,11 +1,11 @@
-## gcx sigil rules
+## gcx sigil templates
 
-Manage rules that route generations to evaluators.
+Browse reusable evaluator blueprints (global and tenant-scoped).
 
 ### Options
 
 ```
-  -h, --help   help for rules
+  -h, --help   help for templates
 ```
 
 ### Options inherited from parent commands
@@ -22,9 +22,7 @@ Manage rules that route generations to evaluators.
 ### SEE ALSO
 
 * [gcx sigil](gcx_sigil.md)	 - Manage Sigil AI observability resources
-* [gcx sigil rules create](gcx_sigil_rules_create.md)	 - Create an evaluation rule from a file.
-* [gcx sigil rules delete](gcx_sigil_rules_delete.md)	 - Delete evaluation rules.
-* [gcx sigil rules get](gcx_sigil_rules_get.md)	 - Get a single evaluation rule.
-* [gcx sigil rules list](gcx_sigil_rules_list.md)	 - List evaluation rules.
-* [gcx sigil rules update](gcx_sigil_rules_update.md)	 - Update an evaluation rule from a file.
+* [gcx sigil templates get](gcx_sigil_templates_get.md)	 - Get a single eval template.
+* [gcx sigil templates list](gcx_sigil_templates_list.md)	 - List eval templates.
+* [gcx sigil templates versions](gcx_sigil_templates_versions.md)	 - List version history for an eval template.
 
