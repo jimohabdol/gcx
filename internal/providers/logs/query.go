@@ -25,7 +25,12 @@ func queryCmd(loader *providers.ConfigLoader) *cobra.Command {
 		Long: `Execute a LogQL query against a Loki datasource.
 
 EXPR is the LogQL expression to evaluate.
-Datasource is resolved from -d flag or datasources.loki in your context.`,
+Datasource is resolved from -d flag or datasources.loki in your context.
+
+Default table output is optimized for humans. Use -o raw for original line
+bodies or -o json for the full structured response.
+
+Default --limit is 50; use --limit 0 for no cap.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := shared.Validate(); err != nil {
@@ -91,9 +96,13 @@ Datasource is resolved from -d flag or datasources.loki in your context.`,
 		},
 	}
 
-	shared.Setup(cmd.Flags(), false)
+	dsquery.RegisterCodecs(&shared.IO, false)
+	shared.IO.RegisterCustomCodec("raw", loki.NewRawQueryCodec())
+	shared.IO.BindFlags(cmd.Flags())
+	shared.SetupTimeFlags(cmd.Flags())
+	cmd.Flags().StringVar(&shared.Step, "step", "", "Query step (e.g., '15s', '1m')")
 	cmd.Flags().StringVarP(&datasource, "datasource", "d", "", "Datasource UID (required unless datasources.loki is configured)")
-	cmd.Flags().IntVar(&limit, "limit", 1000, "Maximum number of log lines to return (0 means no limit)")
+	cmd.Flags().IntVar(&limit, "limit", dsquery.DefaultLokiLimit, "Maximum number of log lines to return (0 means no limit)")
 
 	return cmd
 }
