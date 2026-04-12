@@ -17,8 +17,8 @@ import (
 	"github.com/grafana/gcx/internal/datasources"
 	"github.com/grafana/gcx/internal/format"
 	"github.com/grafana/gcx/internal/graph"
+	"github.com/grafana/gcx/internal/httputils"
 	cmdio "github.com/grafana/gcx/internal/output"
-	"github.com/grafana/gcx/internal/providers"
 	"github.com/grafana/gcx/internal/providers/synth/probes"
 	"github.com/grafana/gcx/internal/providers/synth/smcfg"
 	"github.com/grafana/gcx/internal/query/prometheus"
@@ -148,7 +148,7 @@ Requires a Prometheus datasource containing SM metrics.`,
 				return err
 			}
 
-			smClient := NewClient(baseURL, token)
+			smClient := NewClient(ctx, baseURL, token)
 
 			// Parse optional check ID arg before launching goroutines.
 			var filterID int64
@@ -185,7 +185,7 @@ Requires a Prometheus datasource containing SM metrics.`,
 			})
 
 			initG.Go(func() error {
-				probeList, err := probes.NewClient(baseURL, token).List(initCtx)
+				probeList, err := probes.NewClient(initCtx, baseURL, token).List(initCtx)
 				if err == nil {
 					probeNameMap = buildProbeNameMap(probeList)
 				}
@@ -358,7 +358,7 @@ Requires a Prometheus datasource containing SM metrics.`,
 				return err
 			}
 
-			client := NewClient(baseURL, token)
+			client := NewClient(ctx, baseURL, token)
 
 			c, err := client.Get(ctx, id)
 			if err != nil {
@@ -849,7 +849,8 @@ func smMetricsDatasourceName(ctx context.Context, grafanaCtx *config.Context) (s
 		req.SetBasicAuth(grafanaCtx.Grafana.User, grafanaCtx.Grafana.Password)
 	}
 
-	resp, err := providers.ExternalHTTPClient().Do(req)
+	client := httputils.NewDefaultClient(ctx)
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}

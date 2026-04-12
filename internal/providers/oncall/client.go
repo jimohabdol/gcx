@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/grafana/gcx/internal/config"
-	"github.com/grafana/gcx/internal/providers"
+	"github.com/grafana/gcx/internal/httputils"
 	"k8s.io/client-go/rest"
 )
 
@@ -46,7 +46,7 @@ type Client struct {
 // NewClient creates a new OnCall client from the given REST config and OnCall API URL.
 // oncallURL is the OnCall API base URL (e.g., https://oncall-prod-us-central-0.grafana.net/oncall).
 // cfg is the namespaced REST config providing auth, TLS, and the stack URL.
-func NewClient(oncallURL string, cfg config.NamespacedRESTConfig) (*Client, error) {
+func NewClient(ctx context.Context, oncallURL string, cfg config.NamespacedRESTConfig) (*Client, error) {
 	var httpClient *http.Client
 	var token string
 	isOAuthProxy := cfg.IsOAuthProxy()
@@ -61,8 +61,10 @@ func NewClient(oncallURL string, cfg config.NamespacedRESTConfig) (*Client, erro
 			return nil, fmt.Errorf("oncall: create oauth http client: %w", err)
 		}
 	} else {
-		// Direct mode: use standalone HTTP client with SA token.
-		httpClient = providers.ExternalHTTPClient()
+		// Direct mode: OnCall API uses its own auth (raw token in Authorization
+		// header), not the Grafana bearer token. Use a standalone HTTP client
+		// with no auth injection — providers set their own auth headers per request.
+		httpClient = httputils.NewDefaultClient(ctx)
 		token = cfg.BearerToken
 		if strings.HasPrefix(token, "Bearer ") {
 			slog.Warn("OnCall token already contains 'Bearer ' prefix — this may be a misconfiguration; the token is used as-is without an additional prefix")

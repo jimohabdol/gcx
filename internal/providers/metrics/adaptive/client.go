@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/grafana/gcx/internal/httputils"
 	"github.com/grafana/gcx/internal/resources/adapter"
 )
 
@@ -29,10 +30,10 @@ type Client struct {
 }
 
 // NewClient creates a new Adaptive Metrics client.
-// If httpClient is nil, http.DefaultClient is used.
-func NewClient(baseURL string, tenantID int, apiToken string, httpClient *http.Client) *Client {
+// If httpClient is nil, httputils.NewDefaultClient is used.
+func NewClient(ctx context.Context, baseURL string, tenantID int, apiToken string, httpClient *http.Client) *Client {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = httputils.NewDefaultClient(ctx)
 	}
 	return &Client{
 		baseURL:    baseURL,

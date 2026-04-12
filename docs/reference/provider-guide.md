@@ -268,6 +268,104 @@ Reference: `internal/providers/slo/definitions/status.go`, `internal/query/prome
 
 ---
 
+## Step 4b: HTTP Client Construction
+
+The right HTTP client depends on the **active auth mode**, not on whether the
+target is an "external" domain. The decision tree:
+
+```
+Using LoadCloudConfig?  ──yes──▶  cloudCfg.HTTPClient(ctx)   ← always correct
+                                    │
+                                    ├─ SA token mode  → httputils.NewDefaultClient(ctx)
+                                    └─ OAuth proxy mode → rest.HTTPClientFor (proxy adds provider auth)
+
+Not using LoadCloudConfig?  ──────▶  httputils.NewDefaultClient(ctx)
+(token passed directly to NewClient)
+```
+
+**Always prefer `cloudCfg.HTTPClient(ctx)`** when `LoadCloudConfig` is available
+— it picks the right client for the active auth mode automatically, including
+future proxy routing changes.
+
+### Via CloudRESTConfig (preferred)
+
+```go
+func newClient(ctx context.Context, loader *providers.ConfigLoader) (*Client, error) {
+    cloudCfg, err := loader.LoadCloudConfig(ctx)
+    if err != nil {
+        return nil, err
+    }
+    httpClient, err := cloudCfg.HTTPClient(ctx)
+    if err != nil {
+        return nil, err
+    }
+    return &Client{httpClient: httpClient}, nil
+}
+```
+
+`CloudRESTConfig.HTTPClient(ctx)` selects the client based on auth mode:
+- **SA token** (`RESTConfig == nil`) → `httputils.NewDefaultClient(ctx)` — no
+  auth injection, provider sets its own headers per request
+- **OAuth proxy** (`RESTConfig != nil`) → `rest.HTTPClientFor` — RefreshTransport
+  handles gat_ token renewal; the proxy adds provider auth server-side
+
+Both paths carry `LoggingRoundTripper` and respect `--log-http-payload`.
+
+### Direct construction (when CloudRESTConfig is unavailable)
+
+When the provider receives credentials directly (not via `LoadCloudConfig`),
+use `httputils.NewDefaultClient(ctx)` in the constructor:
+
+```go
+func NewClient(ctx context.Context, baseURL, token string) *Client {
+    return &Client{
+        httpClient: httputils.NewDefaultClient(ctx),
+        baseURL:    baseURL,
+        token:      token,
+    }
+}
+```
+
+`NewDefaultClient(ctx)` provides:
+- **`LoggingRoundTripper`** — Debug for 2xx-4xx, Warn for 5xx/errors
+- **`--log-http-payload` support** — full body dumps when the flag is set
+- **60-second timeout** and sensible TLS defaults (TLS 1.2+, verify enabled)
+- **No auth injection** — provider sets its own auth headers per request
+
+### What NOT to do
+
+```go
+// BAD: bare http.Client — no logging, no --log-http-payload support
+client := &http.Client{Timeout: 30 * time.Second}
+
+// BAD: http.DefaultClient — shared mutable state, no logging
+resp, err := http.DefaultClient.Get(url)
+
+// BAD: rest.HTTPClientFor directly for SA-token providers — injects Grafana
+// bearer token, conflicting with the provider's own auth headers
+httpClient, _ := rest.HTTPClientFor(&cfg.Config)
+
+// BAD: custom transport without LoggingRoundTripper
+client := &http.Client{Transport: &http.Transport{...}}
+```
+
+### When to use `NewClient(ClientOpts{...})`
+
+Use the explicit factory only when you need custom TLS, non-default timeout,
+or additional middleware:
+
+```go
+client := httputils.NewClient(httputils.ClientOpts{
+    TLSConfig:   customTLS,
+    Timeout:     5 * time.Second,
+    Middlewares: []httputils.Middleware{httputils.LoggingMiddleware, myCustomMiddleware},
+})
+```
+
+Always include `httputils.LoggingMiddleware` in custom middleware stacks.
+
+---
+
 ## Step 5: Register the Provider
 
 Providers self-register using the `Register()` function in your provider's `init()` function.
