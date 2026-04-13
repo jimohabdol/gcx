@@ -90,7 +90,9 @@ func buildOnCallRegistration[T adapter.ResourceNamer](
 			}
 
 			if listFn != nil {
-				crud.ListFn = func(ctx context.Context) ([]T, error) { return listFn(ctx, client) }
+				crud.ListFn = adapter.LimitedListFn(func(ctx context.Context) ([]T, error) {
+					return listFn(ctx, client)
+				})
 			}
 
 			if getFn != nil {
@@ -610,7 +612,9 @@ func NewTypedCRUD[T adapter.ResourceNamer](
 	}
 
 	crud := &adapter.TypedCRUD[T]{
-		ListFn:      func(ctx context.Context) ([]T, error) { return listFn(ctx, client) },
+		ListFn: adapter.LimitedListFn(func(ctx context.Context) ([]T, error) {
+			return listFn(ctx, client)
+		}),
 		StripFields: []string{"id", "password", "authorization_header"},
 		Namespace:   namespace,
 	}

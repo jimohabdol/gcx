@@ -84,7 +84,7 @@ func NewTypedCRUD(ctx context.Context, loader GrafanaConfigLoader) (*adapter.Typ
 
 	//nolint:dupl // Duplicate TypedCRUD initialization intentional between factory functions.
 	crud := &adapter.TypedCRUD[Slo]{
-		ListFn: client.List,
+		ListFn: adapter.LimitedListFn(client.List),
 		GetFn: func(ctx context.Context, name string) (*Slo, error) {
 			return client.Get(ctx, name)
 		},
@@ -146,7 +146,7 @@ func NewFactoryFromConfig(cfg internalconfig.NamespacedRESTConfig) adapter.Facto
 
 		//nolint:dupl // Duplicate TypedCRUD initialization intentional between factory functions.
 		crud := &adapter.TypedCRUD[Slo]{
-			ListFn: client.List,
+			ListFn: adapter.LimitedListFn(client.List),
 			GetFn: func(ctx context.Context, name string) (*Slo, error) {
 				return client.Get(ctx, name)
 			},
