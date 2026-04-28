@@ -12,6 +12,7 @@ import (
 	"github.com/grafana/gcx/internal/providers"
 	"github.com/grafana/gcx/internal/resources"
 	"github.com/grafana/gcx/internal/resources/adapter"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -169,7 +170,10 @@ func (em *etagManager) update(ctx context.Context, _ string, item *MetricRule) (
 	return item, nil
 }
 
-func (em *etagManager) delete(ctx context.Context, name string) error {
+func (em *etagManager) delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	if adapter.IsDryRun(opts.DryRun) {
+		return nil
+	}
 	return em.withETag(ctx, func(etag string) (string, error) {
 		// Delete returns no ETag — returning "" invalidates the cached ETag so
 		// the next mutation re-fetches a fresh one.
@@ -238,10 +242,15 @@ func buildMetricsTypedCRUD[T adapter.ResourceNamer](
 			}
 			return adapter.TruncateSlice(items, limit), nil
 		},
-		GetFn:       get,
-		CreateFn:    create,
-		UpdateFn:    update,
-		DeleteFn:    del,
+		GetFn:    get,
+		CreateFn: create,
+		UpdateFn: update,
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
+			return del(ctx, name)
+		},
 		Namespace:   "default",
 		StripFields: []string{"id"},
 		Descriptor:  desc,

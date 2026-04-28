@@ -19,6 +19,7 @@ import (
 	"github.com/grafana/gcx/internal/style"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -1155,7 +1156,10 @@ func NewPipelineTypedCRUD(ctx context.Context, loader CloudConfigLoader) (*adapt
 			}
 			return updated, nil
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			id, ok := extractIDFromSlug(name)
 			if !ok {
 				return fmt.Errorf("cannot determine pipeline ID from name %q: expected format \"<slug>-<id>\" or numeric ID", name)
@@ -1214,7 +1218,10 @@ func NewCollectorTypedCRUD(ctx context.Context, loader CloudConfigLoader) (*adap
 			}
 			return updated, nil
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			id, ok := extractIDFromSlug(name)
 			if !ok {
 				return fmt.Errorf("cannot determine collector ID from name %q: expected format \"<slug>-<id>\" or numeric ID", name)

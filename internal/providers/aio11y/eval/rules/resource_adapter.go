@@ -11,6 +11,7 @@ import (
 	"github.com/grafana/gcx/internal/providers/aio11y/eval"
 	"github.com/grafana/gcx/internal/resources"
 	"github.com/grafana/gcx/internal/resources/adapter"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -67,7 +68,12 @@ func NewTypedCRUD(ctx context.Context) (*adapter.TypedCRUD[eval.RuleDefinition],
 		UpdateFn: func(ctx context.Context, name string, item *eval.RuleDefinition) (*eval.RuleDefinition, error) {
 			return client.Update(ctx, name, item)
 		},
-		DeleteFn:    client.Delete,
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
+			return client.Delete(ctx, name)
+		},
 		Namespace:   cfg.Namespace,
 		StripFields: ruleStripFields(),
 		Descriptor:  StaticDescriptor(),

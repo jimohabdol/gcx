@@ -9,6 +9,7 @@ import (
 	"github.com/grafana/gcx/internal/providers"
 	"github.com/grafana/gcx/internal/resources"
 	"github.com/grafana/gcx/internal/resources/adapter"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -78,11 +79,16 @@ func buildLogsTypedCRUD[T adapter.ResourceNamer](
 	del func(context.Context, string) error,
 ) *adapter.TypedCRUD[T] {
 	return &adapter.TypedCRUD[T]{
-		ListFn:      adapter.LimitedListFn(list),
-		GetFn:       get,
-		CreateFn:    create,
-		UpdateFn:    update,
-		DeleteFn:    del,
+		ListFn:   adapter.LimitedListFn(list),
+		GetFn:    get,
+		CreateFn: create,
+		UpdateFn: update,
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
+			return del(ctx, name)
+		},
 		Namespace:   "default",
 		StripFields: []string{"id"},
 		Descriptor:  desc,

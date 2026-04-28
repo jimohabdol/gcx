@@ -8,6 +8,7 @@ import (
 	"github.com/grafana/gcx/internal/providers/synth/smcfg"
 	"github.com/grafana/gcx/internal/resources"
 	"github.com/grafana/gcx/internal/resources/adapter"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -74,7 +75,10 @@ func NewTypedCRUD(ctx context.Context, loader smcfg.Loader) (*adapter.TypedCRUD[
 			}
 			return &resp.Probe, nil
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			id, err := strconv.ParseInt(name, 10, 64)
 			if err != nil {
 				return fmt.Errorf("probe name must be a numeric ID, got %q: %w", name, err)

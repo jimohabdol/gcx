@@ -109,7 +109,11 @@ func (deleter *Deleter) Delete(ctx context.Context, request DeleteRequest) (*Ope
 				return nil
 			}
 
-			logger.Info("Resource deleted")
+			if request.DryRun {
+				logger.Info("Resource would be deleted (dry-run)")
+			} else {
+				logger.Info("Resource deleted")
+			}
 			summary.RecordSuccess()
 			return nil
 		},

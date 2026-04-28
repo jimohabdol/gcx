@@ -200,7 +200,7 @@ func TestTypedCRUD_Delete(t *testing.T) {
 	var deletedName string
 
 	crud := newWidgetCRUD(nil)
-	crud.DeleteFn = func(_ context.Context, name string) error {
+	crud.DeleteFn = func(_ context.Context, name string, _ metav1.DeleteOptions) error {
 		deletedName = name
 		return nil
 	}
@@ -582,7 +582,7 @@ func TestTypedCRUD_TypedCreateNil(t *testing.T) {
 func TestTypedCRUD_TypedDelete(t *testing.T) {
 	var deleted string
 	crud := newWidgetCRUD(nil)
-	crud.DeleteFn = func(_ context.Context, name string) error {
+	crud.DeleteFn = func(_ context.Context, name string, _ metav1.DeleteOptions) error {
 		deleted = name
 		return nil
 	}
@@ -594,28 +594,48 @@ func TestTypedCRUD_TypedDelete(t *testing.T) {
 
 func TestTypedCRUD_DeleteDryRun(t *testing.T) {
 	deleteCalled := false
+	dryRunRequested := false
+	realDeleteAttempted := false
 	crud := newWidgetCRUD(nil)
-	crud.DeleteFn = func(_ context.Context, _ string) error {
+	crud.DeleteFn = func(_ context.Context, _ string, opts metav1.DeleteOptions) error {
 		deleteCalled = true
+		for _, v := range opts.DryRun {
+			if v == metav1.DryRunAll {
+				dryRunRequested = true
+			}
+		}
+		if dryRunRequested {
+			// Underlying implementation sees dry-run and must not mutate remote state.
+			return nil
+		}
+		realDeleteAttempted = true
 		return nil
 	}
 
 	a := crud.AsAdapter()
 
-	t.Run("skips DeleteFn when DryRun is flag is set", func(t *testing.T) {
+	t.Run("passes DryRun options through to DeleteFn", func(t *testing.T) {
 		deleteCalled = false
+		dryRunRequested = false
+		realDeleteAttempted = false
 		err := a.Delete(t.Context(), "w-1", metav1.DeleteOptions{
 			DryRun: []string{metav1.DryRunAll},
 		})
 		require.NoError(t, err)
-		assert.False(t, deleteCalled, "DeleteFn should not be called during dry run")
+		assert.True(t, deleteCalled, "DeleteFn should be called so implementations can honor dry-run")
+		assert.True(t, dryRunRequested, "DeleteFn must receive DryRunAll in options")
+		assert.False(t, realDeleteAttempted, "DeleteFn must not attempt a real delete during dry-run")
 	})
 
 	t.Run("calls DeleteFn without DryRun flag set", func(t *testing.T) {
 		deleteCalled = false
+		dryRunRequested = false
+		realDeleteAttempted = false
 		err := a.Delete(t.Context(), "w-1", metav1.DeleteOptions{})
 		require.NoError(t, err)
 		assert.True(t, deleteCalled, "DeleteFn should be called without dry run")
+		assert.False(t, dryRunRequested)
+		assert.True(t, realDeleteAttempted, "DeleteFn should attempt a real delete without dry-run")
 	})
 }
 

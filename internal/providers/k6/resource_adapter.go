@@ -10,6 +10,7 @@ import (
 	"github.com/grafana/gcx/internal/providers"
 	"github.com/grafana/gcx/internal/resources"
 	"github.com/grafana/gcx/internal/resources/adapter"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -153,7 +154,10 @@ func newProjectCRUD(c *Client, ns string, desc resources.Descriptor) adapter.Res
 			}
 			return c.GetProject(ctx, id)
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			id, err := strconv.Atoi(name)
 			if err != nil {
 				return fmt.Errorf("k6: invalid project ID %q: %w", name, err)
@@ -190,7 +194,10 @@ func newLoadTestCRUD(c *Client, ns string, desc resources.Descriptor) adapter.Re
 			}
 			return c.GetLoadTest(ctx, id)
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			id, err := strconv.Atoi(name)
 			if err != nil {
 				return fmt.Errorf("k6: invalid load test ID %q: %w", name, err)
@@ -232,7 +239,10 @@ func newScheduleCRUD(c *Client, ns string, desc resources.Descriptor) adapter.Re
 			}
 			return c.UpdateScheduleByID(ctx, id, req)
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			id, err := strconv.Atoi(name)
 			if err != nil {
 				return fmt.Errorf("k6: invalid schedule ID %q: %w", name, err)
@@ -294,7 +304,10 @@ func newEnvVarCRUD(c *Client, ns string, desc resources.Descriptor) adapter.Reso
 			}
 			return nil, fmt.Errorf("k6: env var %d not found after update", id)
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			id, err := strconv.Atoi(name)
 			if err != nil {
 				return fmt.Errorf("k6: invalid env var ID %q: %w", name, err)
@@ -326,7 +339,10 @@ func newLoadZoneCRUD(c *Client, ns string, desc resources.Descriptor) adapter.Re
 		},
 		// CreateFn and UpdateFn are nil — PLZ creation uses a different request type
 		// and is exposed via CLI commands, not the generic resource adapter.
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			return c.DeleteLoadZone(ctx, name)
 		},
 		Namespace:   ns,
@@ -507,7 +523,10 @@ func NewTypedCRUDProject(ctx context.Context, loader CloudConfigLoader) (*adapte
 			}
 			return client.GetProject(ctx, id)
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			id, err := strconv.Atoi(name)
 			if err != nil {
 				return fmt.Errorf("k6: invalid project ID %q: %w", name, err)
@@ -546,7 +565,10 @@ func NewTypedCRUDLoadTest(ctx context.Context, loader CloudConfigLoader) (*adapt
 			}
 			return client.GetLoadTest(ctx, id)
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			id, err := strconv.Atoi(name)
 			if err != nil {
 				return fmt.Errorf("k6: invalid load test ID %q: %w", name, err)
@@ -590,7 +612,10 @@ func NewTypedCRUDSchedule(ctx context.Context, loader CloudConfigLoader) (*adapt
 			}
 			return client.UpdateScheduleByID(ctx, id, req)
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			id, err := strconv.Atoi(name)
 			if err != nil {
 				return fmt.Errorf("k6: invalid schedule ID %q: %w", name, err)
@@ -651,7 +676,10 @@ func NewTypedCRUDEnvVar(ctx context.Context, loader CloudConfigLoader) (*adapter
 			}
 			return nil, fmt.Errorf("k6: env var %d not found after update", id)
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			id, err := strconv.Atoi(name)
 			if err != nil {
 				return fmt.Errorf("k6: invalid env var ID %q: %w", name, err)
@@ -682,7 +710,10 @@ func NewTypedCRUDLoadZone(ctx context.Context, loader CloudConfigLoader) (*adapt
 			}
 			return nil, fmt.Errorf("k6: load zone %q not found", name)
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			return client.DeleteLoadZone(ctx, name)
 		},
 	}

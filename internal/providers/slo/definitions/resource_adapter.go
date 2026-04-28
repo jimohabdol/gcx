@@ -9,6 +9,7 @@ import (
 	"github.com/grafana/gcx/internal/providers"
 	"github.com/grafana/gcx/internal/resources"
 	"github.com/grafana/gcx/internal/resources/adapter"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -109,7 +110,10 @@ func NewTypedCRUD(ctx context.Context, loader GrafanaConfigLoader) (*adapter.Typ
 			}
 			return updated, nil
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			return client.Delete(ctx, name)
 		},
 		Namespace:   cfg.Namespace,
@@ -171,7 +175,10 @@ func NewFactoryFromConfig(cfg internalconfig.NamespacedRESTConfig) adapter.Facto
 				}
 				return updated, nil
 			},
-			DeleteFn: func(ctx context.Context, name string) error {
+			DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+				if adapter.IsDryRun(opts.DryRun) {
+					return nil
+				}
 				return client.Delete(ctx, name)
 			},
 			Namespace:   cfg.Namespace,

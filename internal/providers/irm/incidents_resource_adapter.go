@@ -9,6 +9,7 @@ import (
 	internalconfig "github.com/grafana/gcx/internal/config"
 	"github.com/grafana/gcx/internal/resources"
 	"github.com/grafana/gcx/internal/resources/adapter"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -142,7 +143,7 @@ func newIncidentCRUD(client *IncidentClient, namespace string, query IncidentQue
 		UpdateFn: func(ctx context.Context, name string, inc *Incident) (*Incident, error) {
 			return client.UpdateStatus(ctx, name, inc.Status)
 		},
-		DeleteFn: func(_ context.Context, _ string) error {
+		DeleteFn: func(_ context.Context, _ string, _ metav1.DeleteOptions) error {
 			return errors.New("incidents: delete is not supported by the IRM API")
 		},
 		StripFields: []string{"incidentID"},

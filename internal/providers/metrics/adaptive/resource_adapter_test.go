@@ -267,7 +267,7 @@ func TestEtagManagerDeleteInvalidatesEtag(t *testing.T) {
 	em.etag = `"etag-v1"`
 
 	ctx := context.Background()
-	err := em.delete(ctx, "my-metric")
+	err := em.delete(ctx, "my-metric", metav1.DeleteOptions{})
 	require.NoError(t, err)
 
 	// Delete returns no ETag — the manager should have invalidated the cached ETag.

@@ -73,7 +73,7 @@ type TypedCRUD[T ResourceNamer] struct {
 	UpdateFn func(ctx context.Context, name string, item *T) (*T, error)
 
 	// DeleteFn deletes an item by name. Nil means delete is unsupported.
-	DeleteFn func(ctx context.Context, name string) error
+	DeleteFn func(ctx context.Context, name string, opts metav1.DeleteOptions) error
 
 	// ValidateFn validates items without performing mutations. Called during
 	// DryRun (e.g. resources validate, push --dry-run) instead of CreateFn/UpdateFn.
@@ -203,7 +203,7 @@ func (c *TypedCRUD[T]) Delete(ctx context.Context, name string) error {
 	if c.DeleteFn == nil {
 		return errors.ErrUnsupported
 	}
-	return c.DeleteFn(ctx, name)
+	return c.DeleteFn(ctx, name, metav1.DeleteOptions{})
 }
 
 // wrapTypedObject wraps a domain object T into a TypedObject with correct metadata.
@@ -381,7 +381,7 @@ func (a *typedAdapter[T]) Create(ctx context.Context, obj *unstructured.Unstruct
 		return nil, err
 	}
 
-	if isDryRun(opts.DryRun) {
+	if IsDryRun(opts.DryRun) {
 		return a.dryRunValidate(ctx, item)
 	}
 
@@ -408,7 +408,7 @@ func (a *typedAdapter[T]) Update(ctx context.Context, obj *unstructured.Unstruct
 		return nil, err
 	}
 
-	if isDryRun(opts.DryRun) {
+	if IsDryRun(opts.DryRun) {
 		return a.dryRunValidate(ctx, item)
 	}
 
@@ -429,12 +429,7 @@ func (a *typedAdapter[T]) Delete(ctx context.Context, name string, opts metav1.D
 	if a.crud.DeleteFn == nil {
 		return errors.ErrUnsupported
 	}
-
-	if isDryRun(opts.DryRun) {
-		return nil
-	}
-
-	return a.crud.DeleteFn(ctx, name)
+	return a.crud.DeleteFn(ctx, name, opts)
 }
 
 // dryRunValidate validates item via ValidateFn (if set) and returns the
@@ -452,7 +447,9 @@ func (a *typedAdapter[T]) dryRunValidate(ctx context.Context, item *T) (*unstruc
 	return &u, nil
 }
 
-func isDryRun(dryRun []string) bool {
+// IsDryRun reports whether the provided Kubernetes options request a server-side dry-run.
+// gcx uses this to honor `--dry-run` consistently across dynamic and typed adapter paths.
+func IsDryRun(dryRun []string) bool {
 	return slices.Contains(dryRun, metav1.DryRunAll)
 }
 

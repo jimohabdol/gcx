@@ -9,6 +9,7 @@ import (
 	"github.com/grafana/gcx/internal/providers"
 	"github.com/grafana/gcx/internal/resources"
 	"github.com/grafana/gcx/internal/resources/adapter"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -76,7 +77,10 @@ func NewPolicyTypedCRUD(ctx context.Context, loader *providers.ConfigLoader) (*a
 		UpdateFn: func(ctx context.Context, name string, p *Policy) (*Policy, error) {
 			return client.UpdatePolicy(ctx, name, p)
 		},
-		DeleteFn: func(ctx context.Context, name string) error {
+		DeleteFn: func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			return client.DeletePolicy(ctx, name)
 		},
 		Namespace:   "default",

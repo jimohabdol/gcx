@@ -8,6 +8,7 @@ import (
 
 	"github.com/grafana/gcx/internal/resources"
 	"github.com/grafana/gcx/internal/resources/adapter"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -51,7 +52,10 @@ func withUpdate[T adapter.ResourceNamer](fn func(ctx context.Context, c OnCallAP
 
 func withDelete[T adapter.ResourceNamer](fn func(ctx context.Context, c OnCallAPI, name string) error) crudOption[T] {
 	return func(client OnCallAPI, crud *adapter.TypedCRUD[T]) {
-		crud.DeleteFn = func(ctx context.Context, name string) error {
+		crud.DeleteFn = func(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+			if adapter.IsDryRun(opts.DryRun) {
+				return nil
+			}
 			return fn(ctx, client, name)
 		}
 	}
